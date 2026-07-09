@@ -1,0 +1,44 @@
+# Environment
+.env
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Model weights (use Git LFS for these)
+models/saved/*.pt
+models/saved/*.pkl
+models/saved/*.bin
+models/saved/*.safetensors
+
+# Data cache
+data/cache.db
+*.sqlite3
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Reports output
+reports/output/*.pdf
