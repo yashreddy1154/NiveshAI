@@ -79,39 +79,84 @@ def get_symbols(mode):
 # ─────────────────────────────────────────────────────────────────────────────
 # Feature Engineering
 # ─────────────────────────────────────────────────────────────────────────────
+def _normalize_df(df):
+    """
+    Robustly normalize a yfinance DataFrame to standard OHLCV columns.
+    Handles all yfinance API versions (0.1.x, 0.2.x, 2.x).
+    """
+    import pandas as pd
+
+    # Step 1: flatten MultiIndex if present
+    if isinstance(df.columns, pd.MultiIndex):
+        # Take first level (Price type), discard second level (Ticker)
+        df.columns = df.columns.get_level_values(0)
+
+    # Step 2: rename to standard names (handle case variations)
+    rename = {}
+    for c in df.columns:
+        cl = str(c).lower().replace(" ", "_")
+        if cl == "open":          rename[c] = "Open"
+        elif cl == "high":         rename[c] = "High"
+        elif cl == "low":          rename[c] = "Low"
+        elif cl in ("close", "adj_close", "adjclose"): rename[c] = "Close"
+        elif cl == "volume":       rename[c] = "Volume"
+    df = df.rename(columns=rename)
+
+    # Step 3: keep only OHLCV
+    keep = [c for c in ["Open", "High", "Low", "Close", "Volume"] if c in df.columns]
+    df = df[keep].copy()
+
+    # Step 4: drop all-NaN rows, convert to float
+    df = df.dropna(how="all")
+    for c in keep:
+        df[c] = pd.to_numeric(df[c], errors="coerce")
+    df = df.dropna(subset=["Close"])
+
+    return df
+
+
 def add_technical_indicators(df):
     """Add 7 technical indicators to an OHLCV DataFrame."""
     import ta
     import numpy as np
 
+    # Ensure standard column names first
+    df = _normalize_df(df)
+
     # Ensure we have enough data
-    if len(df) < 60:
+    if len(df) < 60 or "Close" not in df.columns:
         return None
 
-    # SMA — Simple Moving Averages (trend direction)
-    df["SMA_20"] = df["Close"].rolling(20).mean()
-    df["SMA_50"] = df["Close"].rolling(50).mean()
+    try:
+        # SMA — Simple Moving Averages (trend direction)
+        df["SMA_20"] = df["Close"].rolling(20).mean()
+        df["SMA_50"] = df["Close"].rolling(50).mean()
 
-    # RSI — Relative Strength Index (0-100, momentum)
-    # >70 = overbought (likely to fall), <30 = oversold (likely to rise)
-    df["RSI_14"] = ta.momentum.rsi(df["Close"], window=14)
+        # RSI — Relative Strength Index (0-100, momentum)
+        df["RSI_14"] = ta.momentum.rsi(df["Close"], window=14)
 
-    # MACD — Moving Average Convergence Divergence (trend changes)
-    macd_obj  = ta.trend.MACD(df["Close"])
-    df["MACD"] = macd_obj.macd_diff()   # difference line (positive = bullish)
+        # MACD — Moving Average Convergence Divergence
+        macd_obj  = ta.trend.MACD(df["Close"])
+        df["MACD"] = macd_obj.macd_diff()
 
-    # Bollinger Bands %B (0=at lower band, 1=at upper band, volatility)
-    boll       = ta.volatility.BollingerBands(df["Close"])
-    df["BB_pctB"] = boll.bollinger_pband()
+        # Bollinger Bands %B
+        boll         = ta.volatility.BollingerBands(df["Close"])
+        df["BB_pctB"] = boll.bollinger_pband()
 
-    # Volume change (normalized)
-    df["Vol_Change"] = df["Volume"].pct_change()
+        # Volume change
+        df["Vol_Change"]   = df["Volume"].pct_change()
+        # Price change
+        df["Price_Change"] = df["Close"].pct_change()
 
-    # Price change (daily returns)
-    df["Price_Change"] = df["Close"].pct_change()
+        df = df.replace([np.inf, -np.inf], np.nan)
+        df = df.dropna()
 
-    df.dropna(inplace=True)
-    return df
+        if len(df) < 60:
+            return None
+
+        return df
+    except Exception as e:
+        return None
 
 FEATURES = ["Close","Volume","SMA_20","SMA_50","RSI_14","MACD","BB_pctB","Vol_Change","Price_Change"]
 
@@ -172,6 +217,7 @@ def download_stock_data(symbols, period="2y", cache_dir="output/stock_cache"):
     os.makedirs(cache_dir, exist_ok=True)
     all_data = {}
     failed   = []
+    first_fail_logged = False
 
     print(f"\n  Downloading {len(symbols)} stocks ({period} of history)...")
     for sym in tqdm(symbols, desc="  Fetching", unit="stock", ncols=70):
@@ -183,19 +229,23 @@ def download_stock_data(symbols, period="2y", cache_dir="output/stock_cache"):
             if age_h < 6:
                 try:
                     df = pd.read_csv(cache_file, index_col=0, parse_dates=True)
-                    if len(df) > 100:
+                    df = _normalize_df(df)
+                    if len(df) > 100 and "Close" in df.columns:
                         all_data[sym] = df
                         continue
                 except Exception:
-                    pass
+                    pass  # re-download if cache is bad
 
         # Download fresh
         try:
             ticker = f"{sym}.NS"
-            df = yf.download(ticker, period=period, progress=False, auto_adjust=True)
-            if len(df) > 100:
-                df.columns = df.columns.get_level_values(0) if hasattr(df.columns, 'levels') else df.columns
-                df.to_csv(cache_file)
+            df = yf.download(
+                ticker, period=period, progress=False,
+                auto_adjust=True, actions=False
+            )
+            df = _normalize_df(df)
+            if len(df) > 100 and "Close" in df.columns:
+                df.to_csv(cache_file)   # save normalised version
                 all_data[sym] = df
             else:
                 failed.append(sym)
@@ -206,6 +256,13 @@ def download_stock_data(symbols, period="2y", cache_dir="output/stock_cache"):
     if failed:
         print(f"  ⚠️  Failed   : {len(failed)} — {', '.join(failed[:10])}{'...' if len(failed)>10 else ''}")
         print(f"     (Failed stocks are skipped — training continues with the rest)")
+
+    # Quick sanity check on first stock
+    if all_data:
+        first_sym = next(iter(all_data))
+        first_df  = all_data[first_sym]
+        print(f"  → Sample check ({first_sym}): {len(first_df)} rows, cols={list(first_df.columns[:5])}")
+
     return all_data
 
 
@@ -479,6 +536,11 @@ def train_rf(stock_data, args):
 
     X_all = np.concatenate(all_X, axis=0)
     y_all = np.concatenate(all_y, axis=0)
+
+    # Fix inf/nan (numpy arrays don't have .replace() — use np.where)
+    X_all = np.where(np.isinf(X_all), np.nan, X_all)
+    X_all = np.nan_to_num(X_all, nan=0.0, posinf=0.0, neginf=0.0)
+
     print(f"  ✅ Training samples: {X_all.shape[0]:,} × {X_all.shape[1]} features")
     print(f"  Distribution: UP={np.sum(y_all==1):,}  FLAT={np.sum(y_all==0):,}  DOWN={np.sum(y_all==-1):,}")
 
