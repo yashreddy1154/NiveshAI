@@ -405,7 +405,25 @@ def train_lstm(stock_data, args):
         # ─ Validate ─
         model.eval()
         with torch.no_grad():
-            val_pred = model(X_val_t.to(device)).cpu()
+            
+            
+           
+            model.eval()
+            val_preds = []
+            val_batch_size = 256  # You can lower this to 128 or 64 if it still crashes
+
+            with torch.no_grad(): # This completely disables gradient tracking to save VRAM
+                for i in range(0, len(X_val_t), val_batch_size):
+                    batch_x = X_val_t[i : i + val_batch_size].to(device)
+                    batch_pred = model(batch_x).cpu()
+                    val_preds.append(batch_pred)
+
+            val_pred = torch.cat(val_preds, dim=0)
+            model.train()
+            
+            
+            
+            
             val_loss = loss_fn(val_pred, y_val_t).item()
             # Approximate RMSE in original price scale
             val_rmse_norm = float(np.sqrt(val_loss))
@@ -546,6 +564,18 @@ def train_rf(stock_data, args):
 
     # ── Scale features ────────────────────────────────────────────────────────
     scaler = StandardScaler()
+    
+    import numpy as np
+    import pandas as pd
+
+    # 1. Replace infinite values with NaN
+    X_all = X_all.replace([np.inf, -np.inf], np.nan)
+
+    # 2. Fill NaNs (Forward fill, then fill any remaining at the start with 0)
+    X_all = X_all.ffill().fillna(0)
+    
+    
+    
     X_all_scaled = scaler.fit_transform(X_all)
 
     X_train, X_val, y_train, y_val = train_test_split(

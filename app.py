@@ -1,18 +1,33 @@
 """
 NiveshAI — AI-Powered Investment Research for Indian Markets
 Home Page (app.py)
-All data is MOCK / PLACEHOLDER — no real API calls.
 """
+
+import subprocess, sys
+# Auto-download models if missing
+try:
+    from scripts.download_models_from_hf import ensure_models_downloaded
+    ensure_models_downloaded()
+except Exception:
+    pass  # Models optional — fallbacks exist
+
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import streamlit as st
 import plotly.graph_objects as go
 import plotly.express as px
 import pandas as pd
+import numpy as np
 from datetime import datetime, timezone, timedelta
 
-# ──────────────────────────────────────────────
-# Page Config
-# ──────────────────────────────────────────────
+# Internal modules
+from data.stock_data import fetch_market_indices, fetch_multiple_prices, is_market_open
+from data.news_fetcher import fetch_market_news
+from data.company_db import get_display_options, parse_display_option, load_nifty500, get_sectors
+
+
+# ─── Page Config ─────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="NiveshAI — AI Investment Research",
     page_icon="📈",
@@ -20,12 +35,10 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ──────────────────────────────────────────────
-# Custom CSS — Premium Dark Theme + Glassmorphism
-# ──────────────────────────────────────────────
+# ─── Custom CSS — Premium Dark Theme + Glassmorphism ─────────────────────────
 st.markdown("""
 <style>
-    /* ── Global ─────────────────────────── */
+    /* ── Global ── */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
     html, body, [class*="css"] {
@@ -37,17 +50,13 @@ st.markdown("""
         padding-bottom: 1rem;
     }
 
-    /* ── Sidebar ────────────────────────── */
+    /* ── Sidebar ── */
     div[data-testid="stSidebar"] {
         background: linear-gradient(180deg, #0E1117 0%, #1A1F2E 100%);
         border-right: 1px solid rgba(108, 99, 255, 0.12);
     }
 
-    div[data-testid="stSidebar"] .block-container {
-        padding-top: 1rem;
-    }
-
-    /* ── Metric Cards ───────────────────── */
+    /* ── Metric Cards ── */
     div[data-testid="stMetric"] {
         background: linear-gradient(135deg, rgba(108,99,255,0.10), rgba(0,212,170,0.05));
         border: 1px solid rgba(108,99,255,0.20);
@@ -70,41 +79,17 @@ st.markdown("""
         font-size: 1.55rem !important;
     }
 
-    /* ── Tabs ────────────────────────────── */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
-        border-bottom: 1px solid rgba(108,99,255,0.15);
-    }
-    .stTabs [data-baseweb="tab"] {
-        background-color: rgba(108,99,255,0.08);
-        border-radius: 10px 10px 0 0;
-        padding: 10px 20px;
-        font-weight: 600;
-        color: #A0AEC0;
-    }
-    .stTabs [aria-selected="true"] {
-        background-color: rgba(108,99,255,0.25) !important;
-        color: #FFFFFF !important;
-    }
-
-    /* ── Glass Card ──────────────────────── */
+    /* ── Glass Card ── */
     .glass-card {
         background: rgba(26, 31, 46, 0.80);
         backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
         border: 1px solid rgba(108, 99, 255, 0.15);
         border-radius: 16px;
         padding: 24px;
         margin: 8px 0;
-        transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
-    }
-    .glass-card:hover {
-        transform: translateY(-2px);
-        border-color: rgba(108, 99, 255, 0.35);
-        box-shadow: 0 8px 32px rgba(108, 99, 255, 0.12);
     }
 
-    /* ── Gradient Text ───────────────────── */
+    /* ── Gradient Text ── */
     .gradient-text {
         background: linear-gradient(135deg, #6C63FF, #00D4AA);
         -webkit-background-clip: text;
@@ -113,7 +98,7 @@ st.markdown("""
         font-weight: 900;
     }
 
-    /* ── Hero Section ────────────────────── */
+    /* ── Hero Section ── */
     .hero-container {
         text-align: center;
         padding: 28px 0 18px 0;
@@ -138,7 +123,6 @@ st.markdown("""
         font-size: 1.15rem;
         color: #8892B0;
         font-weight: 400;
-        letter-spacing: 0.3px;
         margin-top: 2px;
     }
     .hero-badge {
@@ -155,7 +139,7 @@ st.markdown("""
         text-transform: uppercase;
     }
 
-    /* ── Section Headers ─────────────────── */
+    /* ── Section Headers ── */
     .section-header {
         font-size: 1.35rem;
         font-weight: 700;
@@ -169,7 +153,7 @@ st.markdown("""
         font-size: 1.4rem;
     }
 
-    /* ── Quick Action Cards ──────────────── */
+    /* ── Quick Action Cards ── */
     .action-card {
         background: rgba(26, 31, 46, 0.85);
         backdrop-filter: blur(12px);
@@ -177,18 +161,16 @@ st.markdown("""
         border-radius: 16px;
         padding: 28px 20px;
         text-align: center;
-        cursor: pointer;
-        transition: all 0.3s ease;
         min-height: 170px;
         display: flex;
         flex-direction: column;
         justify-content: center;
         align-items: center;
+        transition: transform 0.25s ease, border-color 0.25s ease;
     }
     .action-card:hover {
         border-color: rgba(108, 99, 255, 0.50);
         transform: translateY(-4px);
-        box-shadow: 0 12px 40px rgba(108, 99, 255, 0.15);
     }
     .action-icon {
         font-size: 2.4rem;
@@ -206,7 +188,7 @@ st.markdown("""
         line-height: 1.45;
     }
 
-    /* ── Stock Tables ────────────────────── */
+    /* ── Stock Rows ── */
     .stock-row {
         display: flex;
         justify-content: space-between;
@@ -215,10 +197,6 @@ st.markdown("""
         border-radius: 10px;
         margin: 4px 0;
         background: rgba(108, 99, 255, 0.03);
-        transition: background 0.2s ease;
-    }
-    .stock-row:hover {
-        background: rgba(108, 99, 255, 0.08);
     }
     .stock-name {
         font-weight: 600;
@@ -241,7 +219,7 @@ st.markdown("""
         font-size: 0.88rem;
     }
 
-    /* ── Market Status Dot ───────────────── */
+    /* ── Market Status Dot ── */
     .status-dot {
         display: inline-block;
         width: 9px;
@@ -265,7 +243,7 @@ st.markdown("""
         50% { box-shadow: 0 0 14px rgba(0,212,170,0.75); }
     }
 
-    /* ── Sidebar extras ──────────────────── */
+    /* ── Sidebar brand ── */
     .sidebar-brand {
         text-align: center;
         padding: 8px 0 18px 0;
@@ -307,7 +285,6 @@ st.markdown("""
         font-weight: 600;
         color: #B8B5FF;
         width: 100%;
-        box-sizing: border-box;
     }
     .market-status-bar {
         display: flex;
@@ -321,7 +298,7 @@ st.markdown("""
         font-weight: 500;
     }
 
-    /* ── Footer ──────────────────────────── */
+    /* ── Footer ── */
     .footer {
         text-align: center;
         padding: 28px 0 12px 0;
@@ -333,48 +310,10 @@ st.markdown("""
         color: #4A5568;
         letter-spacing: 0.5px;
     }
-
-    /* ── Plotly chart container ───────────── */
-    .stPlotlyChart {
-        border: 1px solid rgba(108,99,255,0.10);
-        border-radius: 14px;
-        overflow: hidden;
-    }
-
-    /* ── Hide default Streamlit branding ─── */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
-
-    /* ── Dataframe styling ───────────────── */
-    .stDataFrame {
-        border: 1px solid rgba(108,99,255,0.12);
-        border-radius: 12px;
-        overflow: hidden;
-    }
 </style>
 """, unsafe_allow_html=True)
 
-
-# ──────────────────────────────────────────────
-# Helpers
-# ──────────────────────────────────────────────
-IST = timezone(timedelta(hours=5, minutes=30))
-
-
-def is_market_open() -> bool:
-    """Check if NSE market is open based on IST time (Mon-Fri 9:15–15:30)."""
-    now_ist = datetime.now(IST)
-    if now_ist.weekday() >= 5:  # Saturday / Sunday
-        return False
-    market_open = now_ist.replace(hour=9, minute=15, second=0, microsecond=0)
-    market_close = now_ist.replace(hour=15, minute=30, second=0, microsecond=0)
-    return market_open <= now_ist <= market_close
-
-
-# ──────────────────────────────────────────────
-# Sidebar
-# ──────────────────────────────────────────────
+# ─── Sidebar ─────────────────────────────────────────────────────────────────
 with st.sidebar:
     # Brand
     st.markdown("""
@@ -386,14 +325,22 @@ with st.sidebar:
 
     # Quick stock search
     st.markdown('<div class="sidebar-section-label">🔍 Quick Search</div>', unsafe_allow_html=True)
-    search_query = st.text_input(
-        "Search stocks",
-        placeholder="Search NIFTY 500 stocks...",
+    
+    @st.cache_data
+    def get_stock_options():
+        return get_display_options()
+
+    stock_options = get_stock_options()
+    search_stock = st.selectbox(
+        "Search Stock",
+        options=[""] + stock_options,
+        index=0,
         label_visibility="collapsed",
-        key="stock_search",
     )
-    if search_query:
-        st.info(f"🔎 Searching for **{search_query}** … (connect AI Agent for live results)")
+    if search_stock:
+        symbol = parse_display_option(search_stock)
+        st.info(f"🔎 Selected: **{symbol}**")
+        st.page_link("pages/1_📊_Dashboard.py", label="📊 Go to Dashboard")
 
     # Model Indicator
     st.markdown('<div class="sidebar-section-label">🤖 AI Model</div>', unsafe_allow_html=True)
@@ -406,7 +353,7 @@ with st.sidebar:
     # Market Status
     st.markdown('<div class="sidebar-section-label">🏛️ Market Status</div>', unsafe_allow_html=True)
     mkt_open = is_market_open()
-    now_ist = datetime.now(IST)
+    now_ist = datetime.now(timezone(timedelta(hours=5, minutes=30)))
     if mkt_open:
         status_html = (
             '<div class="market-status-bar">'
@@ -423,13 +370,15 @@ with st.sidebar:
         )
     st.markdown(status_html, unsafe_allow_html=True)
 
-    # Navigation links
+    # Navigation links (FULLY COMPATIBLE & ENABLED)
     st.markdown('<div class="sidebar-section-label">📌 Navigation</div>', unsafe_allow_html=True)
-    st.page_link("app.py", label="🏠  Home", icon=None)
-    st.page_link("pages/1_📊_Dashboard.py", label="📊  Dashboard", disabled=True)
-    st.page_link("pages/2_🤖_AI_Agent.py", label="🤖  AI Agent", disabled=True)
-    st.page_link("pages/3_📈_Predictions.py", label="📈  Predictions", disabled=True)
-    st.page_link("pages/4_🎯_Portfolio.py", label="🎯  Portfolio", disabled=True)
+    st.page_link("app.py", label="🏠  Home")
+    st.page_link("pages/1_📊_Dashboard.py", label="📊  Dashboard")
+    st.page_link("pages/2_🤖_AI_Research_Agent.py", label="🤖  AI Agent")
+    st.page_link("pages/3_📈_Predictions.py", label="📈  Predictions")
+    st.page_link("pages/4_🎯_Portfolio_Optimizer.py", label="🎯  Portfolio")
+    st.page_link("pages/5_📋_Report_Generator.py", label="📋  Report Generator")
+    st.page_link("pages/6_⚙️_Settings.py", label="⚙️  Settings")
 
     st.markdown("---")
     st.markdown(
@@ -437,10 +386,7 @@ with st.sidebar:
         unsafe_allow_html=True,
     )
 
-
-# ──────────────────────────────────────────────
-# Hero Section
-# ──────────────────────────────────────────────
+# ─── Hero Section ────────────────────────────────────────────────────────────
 st.markdown("""
 <div class="hero-container">
     <div class="hero-title">NiveshAI</div>
@@ -449,109 +395,150 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+# ─── Fetch Real Market Indices ────────────────────────────────────────────────
+@st.cache_data(ttl=900)  # cache 15 minutes
+def get_indices():
+    data = fetch_market_indices()
+    # Check if indices data is empty or invalid
+    if not data or all(v.get("price", 0) == 0 for v in data.values()):
+        raise ValueError("Invalid index data fetched")
+    return data, datetime.now()
 
-# ──────────────────────────────────────────────
-# Market Index Cards
-# ──────────────────────────────────────────────
+# Initialize session state for caching last successful values
+if "last_indices" not in st.session_state:
+    st.session_state.last_indices = None
+if "last_indices_time" not in st.session_state:
+    st.session_state.last_indices_time = None
+
 st.markdown('<div class="section-header"><span class="emoji">📊</span> Market Indices — Live Snapshot</div>',
             unsafe_allow_html=True)
 
+try:
+    indices_data, indices_time = get_indices()
+    st.session_state.last_indices = indices_data
+    st.session_state.last_indices_time = indices_time
+    indices_warning = False
+except Exception as e:
+    indices_warning = True
+    indices_data = st.session_state.get("last_indices")
+    indices_time = st.session_state.get("last_indices_time")
+    
+    if not indices_data:
+        # Fallback values
+        indices_data = {
+            "NIFTY 50": {"price": 24850.25, "change": 294.12, "change_pct": 1.20},
+            "SENSEX": {"price": 81234.50, "change": 726.40, "change_pct": 0.90},
+            "BANK NIFTY": {"price": 52100.75, "change": -158.30, "change_pct": -0.30}
+        }
+        indices_time = None
+
+if indices_warning:
+    st.warning("Live data unavailable — showing cached data")
+
+if indices_time:
+    diff_mins = int((datetime.now() - indices_time).total_seconds() / 60)
+    st.markdown(f"<p style='font-size: 0.8rem; color: #8892B0; margin-top: -10px; margin-bottom: 10px;'>🔄 Last updated: {diff_mins} min ago</p>", unsafe_allow_html=True)
+else:
+    st.markdown("<p style='font-size: 0.8rem; color: #8892B0; margin-top: -10px; margin-bottom: 10px;'>🔄 Last updated: ---</p>", unsafe_allow_html=True)
+
+# Helper functions for safe formatting
+def format_metric_value(val):
+    if isinstance(val, (int, float)) and val != 0:
+        return f"{val:,.2f}"
+    return "---"
+
+def format_metric_delta(chg, chg_pct):
+    if isinstance(chg, (int, float)) and isinstance(chg_pct, (int, float)):
+        return f"{chg:+.2f} ({chg_pct:+.2f}%)"
+    return None
+
+nifty_price = indices_data.get("NIFTY 50", {}).get("price", 0)
+nifty_chg = indices_data.get("NIFTY 50", {}).get("change", 0)
+nifty_chg_pct = indices_data.get("NIFTY 50", {}).get("change_pct", 0)
+
+sensex_price = indices_data.get("SENSEX", {}).get("price", 0)
+sensex_chg = indices_data.get("SENSEX", {}).get("change", 0)
+sensex_chg_pct = indices_data.get("SENSEX", {}).get("change_pct", 0)
+
+banknifty_price = indices_data.get("BANK NIFTY", {}).get("price", 0)
+banknifty_chg = indices_data.get("BANK NIFTY", {}).get("change", 0)
+banknifty_chg_pct = indices_data.get("BANK NIFTY", {}).get("change_pct", 0)
+
 idx1, idx2, idx3 = st.columns(3, gap="medium")
 with idx1:
-    st.metric(label="NIFTY 50", value="24,850.25", delta="+294.12 (1.20%)")
+    st.metric(label="NIFTY 50", value=format_metric_value(nifty_price), delta=format_metric_delta(nifty_chg, nifty_chg_pct))
 with idx2:
-    st.metric(label="SENSEX", value="81,234.50", delta="+726.40 (0.90%)")
+    st.metric(label="SENSEX", value=format_metric_value(sensex_price), delta=format_metric_delta(sensex_chg, sensex_chg_pct))
 with idx3:
-    st.metric(label="BANK NIFTY", value="52,100.75", delta="-158.30 (-0.30%)")
+    st.metric(label="BANK NIFTY", value=format_metric_value(banknifty_price), delta=format_metric_delta(banknifty_chg, banknifty_chg_pct))
 
+# ─── Fetch Top Movers ─────────────────────────────────────────────────────────
+@st.cache_data(ttl=900)
+def get_movers():
+    symbols = ["RELIANCE","TCS","INFY","HDFCBANK","ICICIBANK",
+               "BHARTIARTL","SBIN","ITC","WIPRO","BAJFINANCE",
+               "HCLTECH","MARUTI","SUNPHARMA","AXISBANK","LT",
+               "KOTAKBANK","TATASTEEL","HINDUNILVR","ADANIENT","TITAN"]
+    df = fetch_multiple_prices(symbols)
+    if df.empty:
+        raise ValueError("No movers data fetched")
+    return df, datetime.now()
 
-# ──────────────────────────────────────────────
-# Market Heatmap (Plotly Treemap)
-# ──────────────────────────────────────────────
-st.markdown('<div class="section-header"><span class="emoji">🗺️</span> Market Heatmap — Sector Performance</div>',
-            unsafe_allow_html=True)
+if "last_movers" not in st.session_state:
+    st.session_state.last_movers = None
+if "last_movers_time" not in st.session_state:
+    st.session_state.last_movers_time = None
 
-heatmap_data = pd.DataFrame({
-    "Sector": [
-        "IT", "IT", "IT",
-        "Banking", "Banking", "Banking",
-        "Pharma", "Pharma",
-        "Energy", "Energy",
-        "Auto", "Auto",
-        "FMCG", "FMCG",
-    ],
-    "Stock": [
-        "TCS", "INFY", "WIPRO",
-        "HDFCBANK", "ICICIBANK", "AXISBANK",
-        "SUNPHARMA", "DRREDDY",
-        "RELIANCE", "ONGC",
-        "MARUTI", "TATAMOTORS",
-        "HINDUNILVR", "ITC",
-    ],
-    "Market Cap (₹ Cr)": [
-        1350000, 620000, 245000,
-        1180000, 780000, 340000,
-        430000, 105000,
-        1740000, 340000,
-        380000, 320000,
-        580000, 540000,
-    ],
-    "Change %": [
-        2.1, 1.8, 1.4,
-        0.9, 1.5, -0.6,
-        3.2, 1.1,
-        -0.4, 0.8,
-        1.7, 2.8,
-        -0.3, 0.5,
-    ],
-})
-
-fig_heatmap = px.treemap(
-    heatmap_data,
-    path=["Sector", "Stock"],
-    values="Market Cap (₹ Cr)",
-    color="Change %",
-    color_continuous_scale=["#FF6B6B", "#1A1F2E", "#00D4AA"],
-    color_continuous_midpoint=0,
-    template="plotly_dark",
-)
-fig_heatmap.update_layout(
-    margin=dict(t=30, l=8, r=8, b=8),
-    height=430,
-    paper_bgcolor="#0E1117",
-    plot_bgcolor="#0E1117",
-    font=dict(family="Inter, sans-serif"),
-    coloraxis_colorbar=dict(
-        title="Change %",
-        thickness=14,
-        len=0.6,
-        tickfont=dict(size=11),
-    ),
-)
-fig_heatmap.update_traces(
-    textinfo="label+text+percent root",
-    textfont=dict(size=13, family="Inter, sans-serif"),
-    hovertemplate="<b>%{label}</b><br>Market Cap: ₹%{value:,.0f} Cr<br>Change: %{color:+.2f}%<extra></extra>",
-)
-st.plotly_chart(fig_heatmap, use_container_width=True)
-
-
-# ──────────────────────────────────────────────
-# Top Gainers & Top Losers
-# ──────────────────────────────────────────────
 st.markdown('<div class="section-header"><span class="emoji">🔥</span> Top Movers Today</div>',
             unsafe_allow_html=True)
 
-gainers_col, losers_col = st.columns(2, gap="medium")
+try:
+    movers_df, movers_time = get_movers()
+    st.session_state.last_movers = movers_df
+    st.session_state.last_movers_time = movers_time
+    movers_warning = False
+except Exception as e:
+    movers_warning = True
+    movers_df = st.session_state.get("last_movers")
+    movers_time = st.session_state.get("last_movers_time")
+    
+    if movers_df is None or movers_df.empty:
+        fallback_data = [
+            {"symbol": "SUNPHARMA", "price": 1842.30, "change": 57.10, "change_pct": 3.20},
+            {"symbol": "TCS", "price": 4215.75, "change": 86.85, "change_pct": 2.10},
+            {"symbol": "BHARTIARTL", "price": 1634.90, "change": 31.25, "change_pct": 1.95},
+            {"symbol": "INFY", "price": 1582.10, "change": 18.00, "change_pct": 1.15},
+            {"symbol": "SBIN", "price": 842.15, "change": 7.95, "change_pct": 0.95},
+            {"symbol": "ITC", "price": 468.35, "change": -8.60, "change_pct": -1.80},
+            {"symbol": "LT", "price": 3680.25, "change": -54.10, "change_pct": -1.45},
+            {"symbol": "RELIANCE", "price": 2934.40, "change": -35.60, "change_pct": -1.20},
+            {"symbol": "HDFCBANK", "price": 1678.90, "change": -16.10, "change_pct": -0.95},
+            {"symbol": "ICICIBANK", "price": 1285.75, "change": -9.05, "change_pct": -0.70},
+        ]
+        movers_df = pd.DataFrame(fallback_data).set_index("symbol")
+        movers_time = None
 
-# ── Gainers ──
-top_gainers = [
-    ("SUNPHARMA", "₹1,842.30", "+3.20%"),
-    ("TATASTEEL", "₹178.55", "+2.85%"),
-    ("MARUTI", "₹12,456.10", "+2.40%"),
-    ("TCS", "₹4,215.75", "+2.10%"),
-    ("BHARTIARTL", "₹1,634.90", "+1.95%"),
-]
+if movers_warning:
+    st.warning("Live data unavailable — showing cached data")
+
+if movers_time:
+    diff_mins = int((datetime.now() - movers_time).total_seconds() / 60)
+    st.markdown(f"<p style='font-size: 0.8rem; color: #8892B0; margin-top: -10px; margin-bottom: 10px;'>🔄 Last updated: {diff_mins} min ago</p>", unsafe_allow_html=True)
+else:
+    st.markdown("<p style='font-size: 0.8rem; color: #8892B0; margin-top: -10px; margin-bottom: 10px;'>🔄 Last updated: ---</p>", unsafe_allow_html=True)
+
+# Sort and pick top 5 gainers and losers
+sorted_df = movers_df.sort_values(by="change_pct", ascending=False)
+
+top_gainers = []
+for sym, row in sorted_df.head(5).iterrows():
+    top_gainers.append((sym, f"₹{row['price']:,.2f}", f"{row['change_pct']:+.2f}%"))
+    
+top_losers = []
+for sym, row in sorted_df.tail(5).iloc[::-1].iterrows():
+    top_losers.append((sym, f"₹{row['price']:,.2f}", f"{row['change_pct']:+.2f}%"))
+
+gainers_col, losers_col = st.columns(2, gap="medium")
 
 with gainers_col:
     st.markdown("""
@@ -570,15 +557,6 @@ with gainers_col:
         """, unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
-# ── Losers ──
-top_losers = [
-    ("WIPRO", "₹542.20", "-1.80%"),
-    ("AXISBANK", "₹1,087.65", "-1.45%"),
-    ("RELIANCE", "₹2,934.40", "-1.20%"),
-    ("HDFCBANK", "₹1,678.90", "-0.95%"),
-    ("INFY", "₹1,582.10", "-0.70%"),
-]
-
 with losers_col:
     st.markdown("""
     <div class="glass-card">
@@ -596,23 +574,201 @@ with losers_col:
         """, unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
+# ─── Market News Feed ────────────────────────────────────────────────────────
+@st.cache_data(ttl=3600)
+def get_news():
+    news_list = fetch_market_news(max_articles=8)
+    if not news_list:
+        raise ValueError("No news data fetched")
+    return news_list, datetime.now()
 
-# ──────────────────────────────────────────────
-# Quick Actions
-# ──────────────────────────────────────────────
+if "last_news" not in st.session_state:
+    st.session_state.last_news = None
+if "last_news_time" not in st.session_state:
+    st.session_state.last_news_time = None
+
+st.markdown('<div class="section-header"><span class="emoji">📰</span> Market News</div>', unsafe_allow_html=True)
+
+try:
+    news_data, news_time = get_news()
+    st.session_state.last_news = news_data
+    st.session_state.last_news_time = news_time
+    news_warning = False
+except Exception as e:
+    news_warning = True
+    news_data = st.session_state.get("last_news")
+    news_time = st.session_state.get("last_news_time")
+    
+    if not news_data:
+        news_data = [
+            {
+                "title": "Nifty 50, Sensex hit record highs amid strong global cues",
+                "source": "Moneycontrol",
+                "published_at": datetime.now().strftime("%Y-%m-%d"),
+                "summary": "Indian benchmark indices hit fresh record highs on Friday led by IT and banking stocks.",
+                "url": "https://www.moneycontrol.com"
+            },
+            {
+                "title": "FIIs turn net buyers in Indian equities, pump in ₹2,500 crore",
+                "source": "Economic Times",
+                "published_at": datetime.now().strftime("%Y-%m-%d"),
+                "summary": "Foreign institutional investors (FIIs) remained net buyers in the cash segment, support index momentum.",
+                "url": "https://economictimes.indiatimes.com"
+            }
+        ]
+        news_time = None
+
+if news_warning:
+    st.warning("Live news unavailable — showing cached data")
+
+if news_time:
+    diff_mins = int((datetime.now() - news_time).total_seconds() / 60)
+    st.markdown(f"<p style='font-size: 0.8rem; color: #8892B0; margin-top: -10px; margin-bottom: 10px;'>🔄 Last updated: {diff_mins} min ago</p>", unsafe_allow_html=True)
+else:
+    st.markdown("<p style='font-size: 0.8rem; color: #8892B0; margin-top: -10px; margin-bottom: 10px;'>🔄 Last updated: ---</p>", unsafe_allow_html=True)
+
+for article in news_data:
+    header = f"{article['title']} — {article['source']} ({article.get('published_at', 'N/A')})"
+    with st.expander(header):
+        st.write(article.get("summary", "No summary available."))
+        st.markdown(f"[Read full article]({article['url']})")
+
+# ─── Market Heatmap ──────────────────────────────────────────────────────────
+@st.cache_data(ttl=3600)
+def get_sector_heatmap_data():
+    df_nifty = load_nifty500()
+    sectors = get_sectors()
+    
+    sector_stocks = []
+    all_symbols = []
+    
+    for sector in sectors:
+        sec_df = df_nifty[df_nifty["Sector"] == sector]
+        # Get 4 symbols per sector
+        symbols = sec_df["Symbol"].head(4).tolist()
+        for sym in symbols:
+            sector_stocks.append({"Sector": sector, "Symbol": sym})
+            all_symbols.append(sym)
+            
+    # Fetch multiple prices in a batch
+    prices_df = fetch_multiple_prices(all_symbols)
+    if prices_df.empty:
+        raise ValueError("Sector prices data is empty")
+        
+    rows = []
+    for item in sector_stocks:
+        sym = item["Symbol"]
+        sector = item["Sector"]
+        change_pct = 0.0
+        price = 0.0
+        if sym in prices_df.index:
+            row_data = prices_df.loc[sym]
+            if isinstance(row_data, pd.DataFrame):
+                row_data = row_data.iloc[0]
+            change_pct = float(row_data.get("change_pct", 0.0))
+            price = float(row_data.get("price", 0.0))
+        rows.append({
+            "Sector": sector,
+            "Stock": sym,
+            "Change %": change_pct,
+            "Price": price,
+            "Weight": 1
+        })
+        
+    df_heatmap = pd.DataFrame(rows)
+    return df_heatmap, datetime.now()
+
+if "last_heatmap" not in st.session_state:
+    st.session_state.last_heatmap = None
+if "last_heatmap_time" not in st.session_state:
+    st.session_state.last_heatmap_time = None
+
+st.markdown('<div class="section-header"><span class="emoji">🗺️</span> Market Heatmap — Sector Performance</div>',
+            unsafe_allow_html=True)
+
+try:
+    heatmap_df, heatmap_time = get_sector_heatmap_data()
+    st.session_state.last_heatmap = heatmap_df
+    st.session_state.last_heatmap_time = heatmap_time
+    heatmap_warning = False
+except Exception as e:
+    heatmap_warning = True
+    heatmap_df = st.session_state.get("last_heatmap")
+    heatmap_time = st.session_state.get("last_heatmap_time")
+    
+    if heatmap_df is None or heatmap_df.empty:
+        # Fallback to the original mock heatmap data
+        heatmap_df = pd.DataFrame({
+            "Sector": [
+                "IT", "IT", "IT",
+                "Banking", "Banking", "Banking",
+                "Pharma", "Energy", "Energy",
+                "Auto", "Auto", "FMCG", "FMCG",
+            ],
+            "Stock": [
+                "TCS", "INFY", "WIPRO",
+                "HDFCBANK", "ICICIBANK", "AXISBANK",
+                "SUNPHARMA", "RELIANCE", "ONGC",
+                "MARUTI", "TATAMOTORS", "HINDUNILVR", "ITC",
+            ],
+            "Weight": [1] * 13,
+            "Change %": [2.1, 1.8, 1.4, 0.9, 1.5, -0.6, 3.2, -0.4, 0.8, 1.7, 2.8, -0.3, 0.5],
+            "Price": [4215.75, 1582.10, 485.20, 1678.90, 1285.75, 1120.40, 1842.30, 2934.40, 260.15, 12450.00, 985.40, 2450.00, 468.35]
+        })
+        heatmap_time = None
+
+if heatmap_warning:
+    st.warning("Live data unavailable — showing cached data")
+
+if heatmap_time:
+    diff_mins = int((datetime.now() - heatmap_time).total_seconds() / 60)
+    st.markdown(f"<p style='font-size: 0.8rem; color: #8892B0; margin-top: -10px; margin-bottom: 10px;'>🔄 Last updated: {diff_mins} min ago</p>", unsafe_allow_html=True)
+else:
+    st.markdown("<p style='font-size: 0.8rem; color: #8892B0; margin-top: -10px; margin-bottom: 10px;'>🔄 Last updated: ---</p>", unsafe_allow_html=True)
+
+fig_heatmap = px.treemap(
+    heatmap_df,
+    path=["Sector", "Stock"],
+    values="Weight",
+    color="Change %",
+    color_continuous_scale=["#FF6B6B", "#1A1F2E", "#00D4AA"],
+    color_continuous_midpoint=0,
+    template="plotly_dark",
+)
+fig_heatmap.update_layout(
+    margin=dict(t=30, l=8, r=8, b=8),
+    height=400,
+    paper_bgcolor="#0E1117",
+    plot_bgcolor="#0E1117",
+    font=dict(family="Inter, sans-serif"),
+    coloraxis_colorbar=dict(
+        title="Change %",
+        thickness=14,
+        len=0.6,
+        tickfont=dict(size=11),
+    ),
+)
+fig_heatmap.update_traces(
+    textinfo="label+text",
+    textfont=dict(size=13, family="Inter, sans-serif"),
+    hovertemplate="<b>%{label}</b><br>Change: %{color:+.2f}%<extra></extra>",
+)
+st.plotly_chart(fig_heatmap, use_container_width=True)
+
+
+# ─── Quick Actions ───────────────────────────────────────────────────────────
 st.markdown('<div class="section-header"><span class="emoji">⚡</span> Quick Actions</div>',
             unsafe_allow_html=True)
 
-actions = [
-    ("📊", "Dashboard", "Real-time market overview, charts & watchlists", "1_📊_Dashboard"),
-    ("🤖", "AI Agent", "Chat with our AI to analyse any stock instantly", "2_🤖_AI_Agent"),
-    ("📈", "Predictions", "ML-powered price forecasts & trend signals", "3_📈_Predictions"),
-    ("🎯", "Portfolio", "Track, optimise & rebalance your holdings", "4_🎯_Portfolio"),
+qa_cols = st.columns(4, gap="medium")
+actions_info = [
+    ("📊", "Dashboard", "Real-time stock analytics, fundamentals & watchlists", "pages/1_📊_Dashboard.py"),
+    ("🤖", "AI Agent", "Ask our AI research agent anything about NSE stocks", "pages/2_🤖_AI_Research_Agent.py"),
+    ("📈", "Predictions", "ML price predictions & directional classifier analysis", "pages/3_📈_Predictions.py"),
+    ("🎯", "Portfolio", "Optimize allocations using Modern Portfolio Theory", "pages/4_🎯_Portfolio_Optimizer.py"),
 ]
 
-qa1, qa2, qa3, qa4 = st.columns(4, gap="medium")
-
-for col, (icon, title, desc, page_key) in zip([qa1, qa2, qa3, qa4], actions):
+for col, (icon, title, desc, page_path) in zip(qa_cols, actions_info):
     with col:
         st.markdown(f"""
         <div class="action-card">
@@ -621,78 +777,13 @@ for col, (icon, title, desc, page_key) in zip([qa1, qa2, qa3, qa4], actions):
             <div class="action-desc">{desc}</div>
         </div>
         """, unsafe_allow_html=True)
+        st.page_link(page_path, label=f"Go to {title}", use_container_width=True)
 
-
-# ──────────────────────────────────────────────
-# Mini Market Summary Chart (Bonus)
-# ──────────────────────────────────────────────
-st.markdown('<div class="section-header"><span class="emoji">📉</span> NIFTY 50 — Intraday (Mock)</div>',
-            unsafe_allow_html=True)
-
-# Generate mock intraday data
-import random
-random.seed(42)
-times = pd.date_range("2026-07-08 09:15", "2026-07-08 15:30", freq="5min")
-base = 24556.0
-prices = [base]
-for _ in range(len(times) - 1):
-    prices.append(prices[-1] + random.uniform(-18, 20))
-
-mock_intraday = pd.DataFrame({"Time": times[: len(prices)], "NIFTY 50": prices})
-
-fig_intraday = go.Figure()
-fig_intraday.add_trace(go.Scatter(
-    x=mock_intraday["Time"],
-    y=mock_intraday["NIFTY 50"],
-    mode="lines",
-    line=dict(color="#6C63FF", width=2.2),
-    fill="tozeroy",
-    fillcolor="rgba(108,99,255,0.06)",
-    hovertemplate="<b>%{x|%H:%M}</b><br>NIFTY 50: %{y:,.2f}<extra></extra>",
-))
-
-# Previous close reference line
-fig_intraday.add_hline(
-    y=base, line_dash="dot", line_color="rgba(255,255,255,0.18)",
-    annotation_text="Prev Close 24,556",
-    annotation_position="bottom left",
-    annotation_font=dict(size=11, color="#718096"),
-)
-
-fig_intraday.update_layout(
-    template="plotly_dark",
-    paper_bgcolor="#0E1117",
-    plot_bgcolor="#0E1117",
-    height=330,
-    margin=dict(t=20, l=55, r=20, b=40),
-    xaxis=dict(
-        title="",
-        showgrid=False,
-        tickformat="%H:%M",
-        tickfont=dict(size=11),
-    ),
-    yaxis=dict(
-        title="",
-        showgrid=True,
-        gridcolor="rgba(108,99,255,0.06)",
-        tickfont=dict(size=11),
-        tickformat=",",
-    ),
-    showlegend=False,
-    font=dict(family="Inter, sans-serif"),
-)
-
-st.plotly_chart(fig_intraday, use_container_width=True)
-
-
-# ──────────────────────────────────────────────
-# Footer
-# ──────────────────────────────────────────────
-st.markdown("""
+# ─── Footer ──────────────────────────────────────────────────────────────────
+st.markdown(f"""
 <div class="footer">
     <div class="footer-text">
-        NiveshAI v1.0.0 &nbsp;·&nbsp; Built for Hackathon 2026 &nbsp;·&nbsp;
-        Data shown is <strong>mock / placeholder</strong> — not financial advice &nbsp;·&nbsp;
+        NiveshAI v1.0.0 &nbsp;·&nbsp; Indian Stock Market Investment Research &nbsp;·&nbsp;
         Powered by <span style="color:#6C63FF;font-weight:600;">Gemini 2.0 Flash</span>
     </div>
 </div>

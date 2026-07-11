@@ -1,8 +1,16 @@
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import streamlit as st
 import plotly.graph_objects as go
 import plotly.express as px
 from datetime import datetime, timedelta
 import random
+from pathlib import Path
+
+# Internal Config
+from config.settings import PROJECT_ROOT, MODELS_DIR, CACHE_DB
 
 # ─── Page Config ────────────────────────────────────────────────────────────
 st.set_page_config(page_title="Settings — NiveshAI", page_icon="⚙️", layout="wide")
@@ -219,6 +227,11 @@ st.markdown("""
         font-weight: 700;
         font-size: 0.85rem;
     }
+    .status-missing {
+        color: #FF6B6B;
+        font-weight: 700;
+        font-size: 0.85rem;
+    }
 
     /* ── Section Headers ── */
     .section-header {
@@ -232,50 +245,108 @@ st.markdown("""
         color: #9DA3B4;
         margin-bottom: 16px;
     }
-
-    /* ── Cost Table ── */
-    .cost-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin: 12px 0;
-    }
-    .cost-table th {
-        text-align: left;
-        color: #9DA3B4;
-        font-weight: 600;
-        font-size: 0.82rem;
-        padding: 10px 14px;
-        border-bottom: 1px solid rgba(108, 99, 255, 0.15);
-    }
-    .cost-table td {
-        padding: 12px 14px;
-        color: #E8E8E8;
-        font-size: 0.9rem;
-        border-bottom: 1px solid rgba(108, 99, 255, 0.08);
-    }
 </style>
 """, unsafe_allow_html=True)
 
-# ─── Session State Defaults ─────────────────────────────────────────────────
-if "active_provider" not in st.session_state:
-    st.session_state.active_provider = "gemini_2_flash"
+# ─── Load & Save .env Helper ─────────────────────────────────────────────────
+env_path = PROJECT_ROOT / ".env"
 
-if "api_keys" not in st.session_state:
-    st.session_state.api_keys = {
+def load_keys_from_env():
+    keys = {
+        "gemini": "",
         "openai": "",
         "groq": "",
         "anthropic": "",
+        "newsapi": "",
     }
+    if env_path.exists():
+        content = env_path.read_text()
+        for line in content.splitlines():
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            k, v = line.split("=", 1)
+            k = k.strip()
+            v = v.strip()
+            if k == "GEMINI_API_KEY": keys["gemini"] = v
+            elif k == "OPENAI_API_KEY": keys["openai"] = v
+            elif k == "GROQ_API_KEY": keys["groq"] = v
+            elif k == "ANTHROPIC_API_KEY": keys["anthropic"] = v
+            elif k == "NEWSAPI_KEY": keys["newsapi"] = v
+    else:
+        # Check environment variables directly as fallback
+        keys["gemini"] = os.getenv("GEMINI_API_KEY", "")
+        keys["openai"] = os.getenv("OPENAI_API_KEY", "")
+        keys["groq"] = os.getenv("GROQ_API_KEY", "")
+        keys["anthropic"] = os.getenv("ANTHROPIC_API_KEY", "")
+        keys["newsapi"] = os.getenv("NEWSAPI_KEY", "")
+    return keys
 
-if "key_statuses" not in st.session_state:
-    st.session_state.key_statuses = {
-        "openai": "not_set",
-        "groq": "not_set",
-        "anthropic": "not_set",
-    }
+def save_keys_to_env(keys):
+    lines = []
+    # If file exists, retain other keys, else build standard
+    existing = {}
+    if env_path.exists():
+        for line in env_path.read_text().splitlines():
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                k, v = line.split("=", 1)
+                existing[k.strip()] = v.strip()
 
-if "keys_saved_toast" not in st.session_state:
-    st.session_state.keys_saved_toast = False
+    # Update keys
+    existing["GEMINI_API_KEY"] = keys["gemini"]
+    existing["OPENAI_API_KEY"] = keys["openai"]
+    existing["GROQ_API_KEY"] = keys["groq"]
+    existing["ANTHROPIC_API_KEY"] = keys["anthropic"]
+    existing["NEWSAPI_KEY"] = keys["newsapi"]
+    
+    # Write back
+    content = ""
+    for k, v in existing.items():
+        content += f"{k}={v}\n"
+    env_path.write_text(content)
+
+# ─── Load initial values to state ────────────────────────────────────────────
+if "api_keys" not in st.session_state:
+    st.session_state.api_keys = load_keys_from_env()
+
+if "active_provider" not in st.session_state:
+    if env_path.exists():
+        # Get active provider from env
+        content = env_path.read_text()
+        active = "gemini_2_flash"
+        for line in content.splitlines():
+            if line.startswith("DEFAULT_LLM_PROVIDER="):
+                active_val = line.split("=", 1)[1].strip()
+                if active_val == "gemini": active = "gemini_2_flash"
+                elif active_val == "gemini_25_flash": active = "gemini_25_flash"
+                elif active_val == "openai": active = "openai_gpt4o"
+                elif active_val == "groq": active = "groq_llama3"
+                elif active_val == "anthropic": active = "anthropic_claude"
+        st.session_state.active_provider = active
+    else:
+        st.session_state.active_provider = "gemini_2_flash"
+
+# ─── Model File Checker Helpers ──────────────────────────────────────────────
+def get_file_status(filename):
+    path = MODELS_DIR / filename
+    if path.exists():
+        size_bytes = path.stat().st_size
+        size_mb = size_bytes / (1024 * 1024)
+        if size_mb >= 1.0:
+            return f"🟢 Loaded ({size_mb:.2f} MB)"
+        else:
+            return f"🟢 Loaded ({size_bytes / 1024:.2f} KB)"
+    return "🔴 Missing"
+
+# Cache DB size helper
+def get_cache_size():
+    if CACHE_DB.exists():
+        size_bytes = CACHE_DB.stat().st_size
+        if size_bytes >= 1024 * 1024:
+            return f"{size_bytes / (1024 * 1024):.2f} MB"
+        return f"{size_bytes / 1024:.2f} KB"
+    return "0.00 KB"
 
 # ─── Sidebar ────────────────────────────────────────────────────────────────
 with st.sidebar:
@@ -369,7 +440,6 @@ with tab_providers:
         },
     ]
 
-    # Render provider cards in a 2-column grid
     for row_start in range(0, len(providers), 2):
         cols = st.columns(2)
         for col_idx, provider in enumerate(providers[row_start : row_start + 2]):
@@ -404,109 +474,153 @@ with tab_providers:
                 btn_disabled = is_active
                 if st.button(btn_label, key=f"btn_{provider['key']}", disabled=btn_disabled, use_container_width=True):
                     st.session_state.active_provider = provider["key"]
+                    
+                    # Update .env
+                    env_val = "gemini"
+                    if provider["key"] == "gemini_25_flash": env_val = "gemini_25_flash"
+                    elif provider["key"] == "openai_gpt4o": env_val = "openai"
+                    elif provider["key"] == "groq_llama3": env_val = "groq"
+                    elif provider["key"] == "anthropic_claude": env_val = "anthropic"
+                    
+                    # Write to env
+                    existing = {}
+                    if env_path.exists():
+                        for line in env_path.read_text().splitlines():
+                            line = line.strip()
+                            if line and "=" in line:
+                                k, v = line.split("=", 1)
+                                existing[k.strip()] = v.strip()
+                    existing["DEFAULT_LLM_PROVIDER"] = env_val
+                    content = ""
+                    for k, v in existing.items():
+                        content += f"{k}={v}\n"
+                    env_path.write_text(content)
                     st.rerun()
-
-    # Currently active summary
-    st.markdown("---")
-    active_prov = next((p for p in providers if p["key"] == st.session_state.active_provider), providers[0])
-    st.markdown(f"""
-    <div class="info-box-green">
-        <strong>Active Provider:</strong> {active_prov["icon"]} {active_prov["name"]}  ·  {active_prov["limit"]}  ·  All NiveshAI analysis will use this model.
-    </div>
-    """, unsafe_allow_html=True)
 
 # ═════════════════════════════════════════════════════════════════════════════
 # TAB 2 — API KEYS
 # ═════════════════════════════════════════════════════════════════════════════
 with tab_keys:
-    st.markdown('<p class="section-header">Manage API Keys</p>', unsafe_allow_html=True)
-    st.markdown('<p class="section-sub">Configure credentials for external model providers. Keys are stored locally in your session only.</p>', unsafe_allow_html=True)
+    st.markdown('<p class="section-header">Manage API Credentials</p>', unsafe_allow_html=True)
+    st.markdown('<p class="section-sub">API keys will be written to the local project <code>.env</code> file for persistence across application restarts.</p>', unsafe_allow_html=True)
 
-    # Gemini — built-in free key
-    st.markdown("""
-    <div class="api-key-card">
-        <div class="provider-name">✨ Gemini (2.0 Flash & 2.5 Flash)</div>
-        <div class="info-box-green" style="margin-top:12px;">
-            🎉 <strong>Built-in free key available</strong> — no configuration needed. NiveshAI ships with a default Gemini API key so you can get started instantly.
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    # Load credentials with dotenv
+    try:
+        from dotenv import set_key, dotenv_values
+        has_dotenv = True
+    except ImportError:
+        has_dotenv = False
 
-    # Keys for providers that need them
-    key_providers = [
-        {"id": "openai", "icon": "🤖", "name": "OpenAI GPT-4o", "placeholder": "sk-proj-..."},
-        {"id": "groq", "icon": "🚀", "name": "Groq LLaMA 3 70B", "placeholder": "gsk_..."},
-        {"id": "anthropic", "icon": "🧠", "name": "Anthropic Claude 3.5", "placeholder": "sk-ant-..."},
+    env_path = PROJECT_ROOT / ".env"
+    if not env_path.exists():
+        try:
+            env_path.touch()
+        except Exception:
+            pass
+
+    current_env = {}
+    if has_dotenv:
+        try:
+            current_env = dotenv_values(env_path)
+        except Exception:
+            pass
+
+    providers_config = [
+        ("gemini", "Gemini API Key", "GEMINI_API_KEY", "https://aistudio.google.com/apikey"),
+        ("openai", "OpenAI API Key", "OPENAI_API_KEY", "https://platform.openai.com/api-keys"),
+        ("groq", "Groq API Key", "GROQ_API_KEY", "https://console.groq.com/keys"),
+        ("anthropic", "Anthropic API Key", "ANTHROPIC_API_KEY", "https://console.anthropic.com/"),
+        ("newsapi", "NewsAPI Key", "NEWSAPI_KEY", "https://newsapi.org/"),
     ]
 
-    for kp in key_providers:
-        st.markdown(f'<div class="api-key-card"><div class="provider-name">{kp["icon"]} {kp["name"]}</div></div>', unsafe_allow_html=True)
-
-        c1, c2, c3 = st.columns([5, 1.5, 1.5])
-        with c1:
-            key_val = st.text_input(
-                f"API Key for {kp['name']}",
-                value=st.session_state.api_keys.get(kp["id"], ""),
-                type="password",
-                placeholder=kp["placeholder"],
-                key=f"key_input_{kp['id']}",
-                label_visibility="collapsed",
-            )
-            st.session_state.api_keys[kp["id"]] = key_val
-
-        with c2:
-            if st.button("🔍 Validate", key=f"validate_{kp['id']}", use_container_width=True):
-                if key_val.strip():
-                    # Mock validation — just checks non-empty & length
-                    st.session_state.key_statuses[kp["id"]] = "valid" if len(key_val.strip()) > 10 else "invalid"
-                else:
-                    st.session_state.key_statuses[kp["id"]] = "not_set"
-
-        with c3:
-            status = st.session_state.key_statuses.get(kp["id"], "not_set")
-            if status == "valid":
-                st.markdown('<span class="key-status" style="color:#00D4AA;">✅ Valid</span>', unsafe_allow_html=True)
-            elif status == "invalid":
-                st.markdown('<span class="key-status" style="color:#FF6B6B;">❌ Invalid</span>', unsafe_allow_html=True)
-            else:
-                st.markdown('<span class="key-status" style="color:#FFB347;">⚠️ Not Set</span>', unsafe_allow_html=True)
+    for key_id, label, env_var, url in providers_config:
+        # Resolve current key value
+        current_val = current_env.get(env_var) or os.getenv(env_var) or st.session_state.api_keys.get(key_id, "")
+        
+        # Display masked status
+        if current_val:
+            masked = "*" * (len(current_val) - 4) + current_val[-4:] if len(current_val) > 4 else "****"
+            st.markdown(f"**{label}**: <span style='color:#00D4AA;font-weight:bold;'>✅ Configured</span> (ending in `{current_val[-4:] if len(current_val) > 4 else current_val}`)", unsafe_allow_html=True)
+        else:
+            st.markdown(f"**{label}**: <span style='color:#FF6B6B;font-weight:bold;'>❌ Not set</span>", unsafe_allow_html=True)
+            
+        st.text_input(
+            label,
+            value="",
+            type="password",
+            placeholder="••••••••••••••••" if current_val else "Enter API key...",
+            help=f"Get key at: {url}",
+            key=f"input_{key_id}",
+            label_visibility="collapsed"
+        )
+        st.markdown("<div style='height:8px;'></div>", unsafe_allow_html=True)
 
     st.markdown("")
-    col_save, col_spacer = st.columns([2, 5])
-    with col_save:
-        if st.button("💾 Save All Keys", use_container_width=True, type="primary"):
-            st.session_state.keys_saved_toast = True
+    if st.button("💾 Save Credentials to .env", type="primary", use_container_width=True):
+        updated = False
+        saved_keys = st.session_state.api_keys.copy()
+        
+        for key_id, label, env_var, url in providers_config:
+            user_input = st.session_state.get(f"input_{key_id}", "")
+            if user_input.strip():
+                saved_keys[key_id] = user_input.strip()
+                if has_dotenv:
+                    try:
+                        set_key(str(env_path), env_var, user_input.strip())
+                    except Exception as e:
+                        st.error(f"Error saving {env_var}: {e}")
+                updated = True
+                
+        if updated:
+            st.session_state.api_keys = saved_keys
+            st.success("API keys saved! Restart the app to apply.")
             st.rerun()
-
-    if st.session_state.keys_saved_toast:
-        st.success("All API keys saved to session successfully!")
-        st.session_state.keys_saved_toast = False
-
-    st.markdown("""
-    <div class="info-box-amber">
-        🔒 <strong>Security Note:</strong> API keys are stored locally in your browser session and <u>never</u> sent to our servers.
-        Keys are cleared when you close the browser tab.
-    </div>
-    """, unsafe_allow_html=True)
+        else:
+            st.info("No new keys entered to save.")
 
 # ═════════════════════════════════════════════════════════════════════════════
 # TAB 3 — USAGE DASHBOARD
 # ═════════════════════════════════════════════════════════════════════════════
 with tab_usage:
-    st.markdown('<p class="section-header">Today\'s Usage Summary</p>', unsafe_allow_html=True)
-    st.markdown('<p class="section-sub">Monitor your API usage and costs across all providers.</p>', unsafe_allow_html=True)
+    st.markdown('<p class="section-header">Performance & Storage Controls</p>', unsafe_allow_html=True)
+    st.markdown('<p class="section-sub">Manage local SQLite database cache size and optimize performance latency.</p>', unsafe_allow_html=True)
 
-    # ── Today's Metrics ──
-    u_col1, u_col2, u_col3 = st.columns(3)
+    from data.cache import get_cache
+    cache = get_cache()
+    
+    c_size = get_cache_size()
+    
+    col_cache1, col_cache2 = st.columns([3, 1])
+    with col_cache1:
+        st.metric("Cached Items", cache.size(), help="Total number of items currently stored in SQLite cache")
+        st.metric("Cache Database Size", c_size)
+    with col_cache2:
+        st.markdown("<div style='height:24px;'></div>", unsafe_allow_html=True)
+        if st.button("🗑️ Clear Cache", use_container_width=True):
+            cache.clear()
+            st.success("Cache cleared!")
+            st.rerun()
 
-    requests_used = 847
+    st.markdown("---")
+    st.markdown('<p class="section-header">API Usage Tracker</p>', unsafe_allow_html=True)
+    st.markdown('<p class="section-sub">Daily request count and statistics tracked by the cache manager.</p>', unsafe_allow_html=True)
+    
+    usage = cache.get_all_usage()
+    if usage:
+        for provider, stats in usage.items():
+            st.markdown(f"🔹 **{provider.upper()}**: `{stats['requests']}` requests today (approx. cost: `${stats['cost_usd']:.4f}`)", unsafe_allow_html=True)
+    else:
+        st.info("No API usage logged today.")
+
+    st.markdown("---")
+    st.markdown('<p class="section-header">Gemini Free Tier Display</p>', unsafe_allow_html=True)
+    
+    gemini_usage = cache.get_daily_usage("gemini")
+    requests_used = gemini_usage.get("requests", 0)
     requests_limit = 1500
-    req_pct = int(requests_used / requests_limit * 100)
-
-    tokens_used = 623450
-    tokens_limit = 1000000
-    tok_pct = int(tokens_used / tokens_limit * 100)
-
+    req_pct = min(100, int(requests_used / requests_limit * 100))
+    
+    u_col1, u_col2 = st.columns(2)
     with u_col1:
         st.markdown(f"""
         <div class="usage-metric-card">
@@ -514,279 +628,80 @@ with tab_usage:
             <div class="usage-metric-label">Requests Used Today</div>
         </div>
         """, unsafe_allow_html=True)
-        st.progress(req_pct / 100, text=f"{req_pct}% of daily limit")
+        st.progress(req_pct / 100.0, text=f"{req_pct}% of daily limit")
 
     with u_col2:
-        st.markdown(f"""
-        <div class="usage-metric-card">
-            <div class="usage-metric-value" style="color:#00D4AA;">{tokens_used:,} <span style="font-size:1rem;color:#9DA3B4;">/ {tokens_limit:,}</span></div>
-            <div class="usage-metric-label">Tokens Used (TPM)</div>
-        </div>
-        """, unsafe_allow_html=True)
-        st.progress(tok_pct / 100, text=f"{tok_pct}% of token limit")
-
-    with u_col3:
         st.markdown("""
         <div class="usage-metric-card">
             <div class="usage-metric-value" style="color:#FFB347;">4h 23m</div>
             <div class="usage-metric-label">Reset Countdown</div>
         </div>
         """, unsafe_allow_html=True)
-        st.markdown("""
-        <div class="info-box-blue" style="margin-top:4px;text-align:center;">
-            ⏰ Daily limits reset at <strong>00:00 UTC</strong>
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.markdown("---")
-
-    # ── Usage History Chart ──
-    st.markdown('<p class="section-header">📈 Usage History — Last 7 Days</p>', unsafe_allow_html=True)
-
-    random.seed(42)
-    days = [(datetime.now() - timedelta(days=i)).strftime("%a %d %b") for i in range(6, -1, -1)]
-    daily_requests = [random.randint(400, 1400) for _ in range(7)]
-    daily_tokens = [random.randint(300000, 950000) for _ in range(7)]
-
-    fig_usage = go.Figure()
-
-    fig_usage.add_trace(go.Bar(
-        x=days,
-        y=daily_requests,
-        name="Requests",
-        marker=dict(
-            color=daily_requests,
-            colorscale=[[0, "#6C63FF"], [0.5, "#00D4AA"], [1, "#FFB347"]],
-            line=dict(width=0),
-            cornerradius=6,
-        ),
-        text=[f"{r:,}" for r in daily_requests],
-        textposition="outside",
-        textfont=dict(color="#9DA3B4", size=11),
-    ))
-
-    fig_usage.add_hline(
-        y=1500, line_dash="dash", line_color="rgba(255,107,107,0.5)",
-        annotation_text="Daily Limit (1,500)",
-        annotation_font=dict(color="#FF6B6B", size=11),
-        annotation_position="top right",
-    )
-
-    fig_usage.update_layout(
-        template="plotly_dark",
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
-        height=380,
-        margin=dict(l=40, r=20, t=30, b=40),
-        yaxis=dict(
-            title="Requests",
-            gridcolor="rgba(108,99,255,0.08)",
-            zeroline=False,
-        ),
-        xaxis=dict(gridcolor="rgba(108,99,255,0.05)"),
-        showlegend=False,
-    )
-    st.plotly_chart(fig_usage, use_container_width=True)
-
-    # ── Tokens History Bar ──
-    fig_tok = go.Figure()
-    fig_tok.add_trace(go.Bar(
-        x=days,
-        y=daily_tokens,
-        name="Tokens",
-        marker=dict(
-            color="#4ECDC4",
-            opacity=0.8,
-            cornerradius=6,
-        ),
-        text=[f"{t / 1000:.0f}K" for t in daily_tokens],
-        textposition="outside",
-        textfont=dict(color="#9DA3B4", size=11),
-    ))
-    fig_tok.update_layout(
-        template="plotly_dark",
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
-        height=300,
-        margin=dict(l=40, r=20, t=10, b=40),
-        yaxis=dict(title="Tokens", gridcolor="rgba(108,99,255,0.08)", zeroline=False),
-        xaxis=dict(gridcolor="rgba(108,99,255,0.05)"),
-        showlegend=False,
-    )
-    st.markdown('<p class="section-header">🪙 Token Consumption — Last 7 Days</p>', unsafe_allow_html=True)
-    st.plotly_chart(fig_tok, use_container_width=True)
-
-    st.markdown("---")
-
-    # ── Cost Tracker ──
-    st.markdown('<p class="section-header">💰 Cost Tracker (Paid Models)</p>', unsafe_allow_html=True)
-
-    st.markdown("""
-    <div class="glass-card">
-        <table class="cost-table">
-            <thead>
-                <tr>
-                    <th>Provider</th>
-                    <th>Today</th>
-                    <th>This Week</th>
-                    <th>This Month</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>🤖 OpenAI GPT-4o</td>
-                    <td style="color:#00D4AA;">$2.34</td>
-                    <td style="color:#00D4AA;">$12.50</td>
-                    <td style="color:#00D4AA;">$43.80</td>
-                    <td><span class="badge badge-paid">ACTIVE</span></td>
-                </tr>
-                <tr>
-                    <td>🧠 Anthropic Claude 3.5</td>
-                    <td style="color:#9DA3B4;">$0.00</td>
-                    <td style="color:#9DA3B4;">$0.00</td>
-                    <td style="color:#9DA3B4;">$0.00</td>
-                    <td><span style="color:#9DA3B4;font-size:0.82rem;">INACTIVE</span></td>
-                </tr>
-                <tr>
-                    <td style="font-weight:700;">Total</td>
-                    <td style="color:#FFE66D;font-weight:700;">$2.34</td>
-                    <td style="color:#FFE66D;font-weight:700;">$12.50</td>
-                    <td style="color:#FFE66D;font-weight:700;">$43.80</td>
-                    <td></td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown("")
-    exp_col1, exp_col2 = st.columns([2, 5])
-    with exp_col1:
-        st.download_button(
-            "📄 Export Usage Report",
-            data="NiveshAI Usage Report\n====================\nGenerated: 2026-07-08\n\nDaily Requests: 847 / 1,500\nTokens Used: 623,450 / 1,000,000\n\nWeekly Cost (OpenAI): $12.50\nMonthly Cost (Total): $43.80\n\n--- End of Report ---",
-            file_name="niveshai_usage_report.txt",
-            mime="text/plain",
-            use_container_width=True,
-        )
 
 # ═════════════════════════════════════════════════════════════════════════════
 # TAB 4 — ABOUT
 # ═════════════════════════════════════════════════════════════════════════════
 with tab_about:
-    # ── App Info ──
     st.markdown("""
     <div class="about-card" style="text-align:center;">
-        <div style="font-size:3rem;margin-bottom:8px;">📊</div>
+        <div style="font-size:3rem;margin-bottom:8px;">⚙️</div>
         <div class="gradient-text" style="font-size:2rem;">NiveshAI</div>
         <div style="color:#9DA3B4;font-size:1rem;margin-top:4px;">v1.0.0</div>
         <div style="color:#E8E8E8;font-size:1.05rem;margin-top:12px;">
             AI-Powered Investment Research for Indian Markets
         </div>
-        <div style="color:#9DA3B4;font-size:0.88rem;margin-top:6px;">
-            Combining state-of-the-art LLMs with quantitative models to deliver actionable insights on NSE stocks.
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # ── Tech Stack ──
-    st.markdown('<p class="section-header">🛠️ Tech Stack</p>', unsafe_allow_html=True)
-    st.markdown("""
-    <div class="about-card">
-        <span class="tech-badge">🐍 Python 3.11</span>
-        <span class="tech-badge">🌊 Streamlit</span>
-        <span class="tech-badge">🔥 PyTorch</span>
-        <span class="tech-badge">📊 Plotly</span>
-        <span class="tech-badge">📈 yfinance</span>
-        <span class="tech-badge">🤗 HuggingFace Transformers</span>
-        <span class="tech-badge">🧠 scikit-learn</span>
-        <span class="tech-badge">🗃️ Pandas</span>
-        <span class="tech-badge">🔢 NumPy</span>
-        <span class="tech-badge">📰 NewsAPI</span>
     </div>
     """, unsafe_allow_html=True)
 
     # ── Trained Models ──
-    st.markdown('<p class="section-header">🧠 Trained Models</p>', unsafe_allow_html=True)
-    st.markdown("""
+    st.markdown('<p class="section-header">🧠 Trained Models Directory Status</p>', unsafe_allow_html=True)
+    
+    # Read training dates if validation_results.txt exists
+    val_results_path = MODELS_DIR / "saved" / "validation_results.txt"
+    val_dates = {}
+    if val_results_path.exists():
+        try:
+            content = val_results_path.read_text()
+            # parse dates if any
+        except Exception:
+            pass
+
+    def get_model_status_with_date(filename):
+        path = MODELS_DIR / "saved" / filename
+        if path.exists():
+            size_bytes = path.stat().st_size
+            size_mb = size_bytes / (1024 * 1024)
+            mtime = datetime.fromtimestamp(path.stat().st_mtime)
+            date_str = mtime.strftime("%d %b %Y, %H:%M")
+            
+            size_str = f"{size_mb:.2f} MB" if size_mb >= 1.0 else f"{size_bytes / 1024:.2f} KB"
+            return f"✅ Loaded ({size_str}) — Trained: {date_str}"
+        return "❌ Missing"
+
+    sentiment_stat = get_model_status_with_date("sentiment_model.pt")
+    lstm_stat = get_model_status_with_date("lstm_model.pt")
+    rf_stat = get_model_status_with_date("rf_model.pkl")
+    scaler_stat = get_model_status_with_date("scaler.pkl")
+    rf_scaler_stat = get_model_status_with_date("rf_scaler.pkl")
+
+    def get_row_html(name, desc, status_text):
+        cls = "status-loaded" if "Loaded" in status_text else "status-missing"
+        return f"""
+        <div class="model-status-row">
+            <div>
+                <div class="model-status-name">{name}</div>
+                <div class="model-status-desc">{desc}</div>
+            </div>
+            <div class="{cls}">{status_text}</div>
+        </div>
+        """
+
+    st.markdown(f"""
     <div class="about-card">
-        <div class="model-status-row">
-            <div>
-                <div class="model-status-name">🎭 Sentiment Analysis Model</div>
-                <div class="model-status-desc">DistilBERT fine-tuned on Financial PhraseBank (4,845 samples)</div>
-            </div>
-            <div class="status-loaded">🟢 Loaded</div>
-        </div>
-        <div class="model-status-row">
-            <div>
-                <div class="model-status-name">📈 LSTM Price Predictor</div>
-                <div class="model-status-desc">2-layer LSTM trained on NIFTY 50 stocks · 60-day sequence window</div>
-            </div>
-            <div class="status-loaded">🟢 Loaded</div>
-        </div>
-        <div class="model-status-row">
-            <div>
-                <div class="model-status-name">🌲 Random Forest Classifier</div>
-                <div class="model-status-desc">Direction predictor trained on NIFTY 50 technical indicators</div>
-            </div>
-            <div class="status-loaded">🟢 Loaded</div>
-        </div>
+        {get_row_html("🎭 Sentiment Analysis Model", "DistilBERT fine-tuned classifier", sentiment_stat)}
+        {get_row_html("📈 LSTM Price Predictor", "Stacked LSTM weights", lstm_stat)}
+        {get_row_html("🌲 Random Forest Classifier", "Directional decision tree model", rf_stat)}
+        {get_row_html("📐 MinMaxScaler (LSTM)", "Scaler for price features normalization", scaler_stat)}
+        {get_row_html("📐 StandardScaler (RF)", "Scaler for classification features", rf_scaler_stat)}
     </div>
     """, unsafe_allow_html=True)
-
-    # ── Data Sources ──
-    st.markdown('<p class="section-header">📡 Data Sources</p>', unsafe_allow_html=True)
-    ds_c1, ds_c2, ds_c3 = st.columns(3)
-    with ds_c1:
-        st.markdown("""
-        <div class="about-card" style="text-align:center;">
-            <div style="font-size:1.8rem;">📈</div>
-            <div style="color:#E8E8E8;font-weight:700;margin-top:6px;">yfinance</div>
-            <div style="color:#9DA3B4;font-size:0.82rem;margin-top:4px;">NSE stock prices, OHLCV data, fundamentals</div>
-        </div>
-        """, unsafe_allow_html=True)
-    with ds_c2:
-        st.markdown("""
-        <div class="about-card" style="text-align:center;">
-            <div style="font-size:1.8rem;">📰</div>
-            <div style="color:#E8E8E8;font-weight:700;margin-top:6px;">NewsAPI</div>
-            <div style="color:#9DA3B4;font-size:0.82rem;margin-top:4px;">Real-time financial news articles & headlines</div>
-        </div>
-        """, unsafe_allow_html=True)
-    with ds_c3:
-        st.markdown("""
-        <div class="about-card" style="text-align:center;">
-            <div style="font-size:1.8rem;">🔗</div>
-            <div style="color:#E8E8E8;font-weight:700;margin-top:6px;">Google News RSS</div>
-            <div style="color:#9DA3B4;font-size:0.82rem;margin-top:4px;">Company-specific news via RSS feeds</div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    # ── Links ──
-    st.markdown('<p class="section-header">🔗 Links</p>', unsafe_allow_html=True)
-    link_c1, link_c2, link_c3 = st.columns(3)
-    with link_c1:
-        st.link_button("⭐ GitHub Repository", "#", use_container_width=True)
-    with link_c2:
-        st.link_button("📖 Documentation", "#", use_container_width=True)
-    with link_c3:
-        st.link_button("🐛 Report an Issue", "#", use_container_width=True)
-
-    # ── Credits ──
-    st.markdown("---")
-    st.markdown("""
-    <div class="about-card" style="text-align:center;">
-        <p class="section-header" style="margin-top:0;">💜 Credits</p>
-        <div style="color:#9DA3B4;font-size:0.92rem;line-height:1.8;">
-            Built with ❤️ for the Indian investing community.<br>
-            Powered by <span style="color:#6C63FF;font-weight:600;">Google Gemini</span>,
-            <span style="color:#00D4AA;font-weight:600;">Streamlit</span>, and
-            <span style="color:#FFB347;font-weight:600;">Open-Source AI</span>.<br>
-            Market data provided by <span style="color:#4ECDC4;font-weight:600;">Yahoo Finance</span> via yfinance.<br><br>
-            <span style="color:#E8E8E8;font-weight:700;">NiveshAI</span> — <em>Nivesh (निवेश)</em> means "Investment" in Hindi 🇮🇳
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.caption("Made with ☕ and Python · © 2026 NiveshAI Team")

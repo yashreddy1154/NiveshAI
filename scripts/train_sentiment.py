@@ -14,6 +14,7 @@ import sys
 import time
 import json
 from datetime import datetime
+from torch.utils.data import Dataset
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Lazy imports (after packages are verified by train_all.py)

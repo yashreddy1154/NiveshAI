@@ -1,3 +1,15 @@
+---
+title: NiveshAI
+emoji: 📈
+colorFrom: purple
+colorTo: cyan
+sdk: streamlit
+sdk_version: 1.35.0
+app_file: app.py
+pinned: true
+license: mit
+---
+
 <p align="center">
   <h1 align="center">📈 NiveshAI</h1>
   <p align="center"><strong>AI-Powered Investment Research for Indian Markets</strong></p>
@@ -50,20 +62,20 @@ Switch between LLM providers from the GUI:
 ## 🏗️ Architecture
 
 ```
-┌─────────────────────────────────────────────────────┐
+┌──────────────────────────────────────────────────────┐
 │                 Streamlit Dashboard                  │
 │  Home │ Dashboard │ AI Agent │ Predictions │ ...     │
-├─────────────────────────────────────────────────────┤
-│            AI Research Agent (Orchestrator)           │
+├──────────────────────────────────────────────────────┤
+│            AI Research Agent (Orchestrator)          │
 │    ┌──────────┬──────────┬──────────┬──────────┐     │
 │    │ Gemini   │ OpenAI   │ Groq     │ Custom   │     │
 │    └──────────┴──────────┴──────────┴──────────┘     │
-├──────────────┬──────────────┬───────────────────┤
-│ Trained ML   │ Analysis     │ Data Pipeline     │
-│ DistilBERT   │ Fundamental  │ yfinance (NSE)    │
-│ LSTM         │ Technical    │ NewsAPI           │
-│ Random Forest│ Risk         │ Google News RSS   │
-└──────────────┴──────────────┴───────────────────┘
+├──────────────┬──────────────┬────────────────────────┤
+│ Trained ML   │ Analysis     │ Data Pipeline          │
+│ DistilBERT   │ Fundamental  │ yfinance (NSE)         │
+│ LSTM         │ Technical    │ NewsAPI                │
+│ Random Forest│ Risk         │ Google News RSS        │
+└──────────────┴──────────────┴────────────────────────┘
 ```
 
 ---

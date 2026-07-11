@@ -1,102 +1,113 @@
-Symbol,Company Name,Sector,Industry,Series,ISIN,Cap Category
-RELIANCE,Reliance Industries Ltd.,Energy,Oil Gas & Consumable Fuels,EQ,INE002A01018,Large
-TCS,Tata Consultancy Services Ltd.,Information Technology,IT Services & Consulting,EQ,INE467B01029,Large
-HDFCBANK,HDFC Bank Ltd.,Financial Services,Banks,EQ,INE040A01034,Large
-INFY,Infosys Ltd.,Information Technology,IT Services & Consulting,EQ,INE009A01021,Large
-ICICIBANK,ICICI Bank Ltd.,Financial Services,Banks,EQ,INE090A01021,Large
-BHARTIARTL,Bharti Airtel Ltd.,Telecommunication,Telecom Services,EQ,INE397D01024,Large
-SBIN,State Bank of India,Financial Services,Banks,EQ,INE062A01020,Large
-ITC,ITC Ltd.,FMCG,Tobacco Products,EQ,INE154A01025,Large
-KOTAKBANK,Kotak Mahindra Bank Ltd.,Financial Services,Banks,EQ,INE237A01028,Large
-LT,Larsen & Toubro Ltd.,Construction,Construction & Engineering,EQ,INE018A01030,Large
-HINDUNILVR,Hindustan Unilever Ltd.,FMCG,Personal Products,EQ,INE030A01027,Large
-BAJFINANCE,Bajaj Finance Ltd.,Financial Services,Consumer Finance,EQ,INE296A01024,Large
-HCLTECH,HCL Technologies Ltd.,Information Technology,IT Services & Consulting,EQ,INE860A01027,Large
-MARUTI,Maruti Suzuki India Ltd.,Automobile,Passenger Cars & Utility Vehicles,EQ,INE585B01010,Large
-SUNPHARMA,Sun Pharmaceutical Industries Ltd.,Healthcare,Pharmaceuticals,EQ,INE044A01036,Large
-TATAMOTORS,Tata Motors Ltd.,Automobile,Passenger Cars & Utility Vehicles,EQ,INE155A01022,Large
-ONGC,Oil & Natural Gas Corporation Ltd.,Energy,Oil Gas & Consumable Fuels,EQ,INE213A01029,Large
-NTPC,NTPC Ltd.,Utilities,Power Generation,EQ,INE733E01010,Large
-POWERGRID,Power Grid Corporation of India Ltd.,Utilities,Power Transmission,EQ,INE752E01010,Large
-AXISBANK,Axis Bank Ltd.,Financial Services,Banks,EQ,INE238A01034,Large
-WIPRO,Wipro Ltd.,Information Technology,IT Services & Consulting,EQ,INE075A01022,Large
-ADANIENT,Adani Enterprises Ltd.,Diversified,Trading & Distributors,EQ,INE423A01024,Large
-TATASTEEL,Tata Steel Ltd.,Metals & Mining,Iron & Steel Products,EQ,INE081A01020,Large
-ASIANPAINT,Asian Paints Ltd.,Consumer Durables,Paints,EQ,INE021A01026,Large
-BAJAJFINSV,Bajaj Finserv Ltd.,Financial Services,Holding Companies,EQ,INE918I01018,Large
-COALINDIA,Coal India Ltd.,Metals & Mining,Coal,EQ,INE522F01014,Large
-NESTLEIND,Nestle India Ltd.,FMCG,Packaged Foods,EQ,INE239A01016,Large
-TITAN,Titan Company Ltd.,Consumer Durables,Gems Jewellery And Watches,EQ,INE280A01028,Large
-ULTRACEMCO,UltraTech Cement Ltd.,Construction Materials,Cement & Cement Products,EQ,INE481G01011,Large
-TECHM,Tech Mahindra Ltd.,Information Technology,IT Services & Consulting,EQ,INE669C01036,Large
-JSWSTEEL,JSW Steel Ltd.,Metals & Mining,Iron & Steel Products,EQ,INE019A01038,Large
-INDUSINDBK,IndusInd Bank Ltd.,Financial Services,Banks,EQ,INE095A01012,Large
-HINDALCO,Hindalco Industries Ltd.,Metals & Mining,Aluminium,EQ,INE038A01020,Large
-DRREDDY,Dr. Reddy's Laboratories Ltd.,Healthcare,Pharmaceuticals,EQ,INE089A01023,Large
-CIPLA,Cipla Ltd.,Healthcare,Pharmaceuticals,EQ,INE059A01026,Large
-BPCL,Bharat Petroleum Corporation Ltd.,Energy,Oil Gas & Consumable Fuels,EQ,INE029A01011,Large
-EICHERMOT,Eicher Motors Ltd.,Automobile,Two Wheelers,EQ,INE066A01021,Large
-GRASIM,Grasim Industries Ltd.,Construction Materials,Cement & Cement Products,EQ,INE047A01021,Large
-APOLLOHOSP,Apollo Hospitals Enterprise Ltd.,Healthcare,Healthcare Facilities,EQ,INE437A01024,Large
-DIVISLAB,Divi's Laboratories Ltd.,Healthcare,Pharmaceuticals,EQ,INE361B01024,Large
-TATACONSUM,Tata Consumer Products Ltd.,FMCG,Tea & Coffee,EQ,INE192A01025,Large
-ADANIPORTS,Adani Ports and SEZ Ltd.,Infrastructure,Port & Port Services,EQ,INE742F01042,Large
-HEROMOTOCO,Hero MotoCorp Ltd.,Automobile,Two Wheelers,EQ,INE158A01026,Large
-BAJAJ-AUTO,Bajaj Auto Ltd.,Automobile,Two Wheelers,EQ,INE917I01010,Large
-SBILIFE,SBI Life Insurance Company Ltd.,Financial Services,Life Insurance,EQ,INE123W01016,Large
-HDFCLIFE,HDFC Life Insurance Company Ltd.,Financial Services,Life Insurance,EQ,INE795G01014,Large
-BRITANNIA,Britannia Industries Ltd.,FMCG,Packaged Foods,EQ,INE216A01030,Large
-VEDL,Vedanta Ltd.,Metals & Mining,Diversified Metals,EQ,INE205A01025,Large
-PIDILITIND,Pidilite Industries Ltd.,Chemicals,Specialty Chemicals,EQ,INE318A01026,Large
-GODREJCP,Godrej Consumer Products Ltd.,FMCG,Personal Products,EQ,INE102D01028,Large
-SIEMENS,Siemens Ltd.,Capital Goods,Heavy Electrical Equipment,EQ,INE003A01024,Large
-HAVELLS,Havells India Ltd.,Consumer Durables,Consumer Electronics,EQ,INE176B01034,Large
-ABB,ABB India Ltd.,Capital Goods,Heavy Electrical Equipment,EQ,INE117A01022,Large
-DABUR,Dabur India Ltd.,FMCG,Personal Products,EQ,INE016A01026,Large
-MARICO,Marico Ltd.,FMCG,Edible Oil,EQ,INE196A01026,Large
-BANKBARODA,Bank of Baroda,Financial Services,Banks,EQ,INE028A01039,Large
-IOC,Indian Oil Corporation Ltd.,Energy,Oil Gas & Consumable Fuels,EQ,INE242A01010,Large
-AMBUJACEM,Ambuja Cements Ltd.,Construction Materials,Cement & Cement Products,EQ,INE079A01024,Large
-DLF,DLF Ltd.,Real Estate,Real Estate Development,EQ,INE271C01023,Large
-SHREECEM,Shree Cement Ltd.,Construction Materials,Cement & Cement Products,EQ,INE070A01015,Large
-TRENT,Trent Ltd.,Consumer Durables,Retailing,EQ,INE849A01020,Large
-ZOMATO,Zomato Ltd.,Consumer Services,Internet & Catalogue Retail,EQ,INE758T01015,Large
-POLYCAB,Polycab India Ltd.,Capital Goods,Cables,EQ,INE455K01017,Large
-MAXHEALTH,Max Healthcare Institute Ltd.,Healthcare,Healthcare Facilities,EQ,INE027H01010,Mid
-MUTHOOTFIN,Muthoot Finance Ltd.,Financial Services,Consumer Finance,EQ,INE414G01012,Mid
-TVSMOTOR,TVS Motor Company Ltd.,Automobile,Two Wheelers,EQ,INE494B01023,Mid
-JUBLFOOD,Jubilant FoodWorks Ltd.,Consumer Services,Restaurants,EQ,INE797F01020,Mid
-MPHASIS,MphasiS Ltd.,Information Technology,IT Services & Consulting,EQ,INE356A01018,Mid
-COFORGE,Coforge Ltd.,Information Technology,IT Services & Consulting,EQ,INE591G01017,Mid
-PERSISTENT,Persistent Systems Ltd.,Information Technology,IT Services & Consulting,EQ,INE262H01013,Mid
-LTIM,LTIMindtree Ltd.,Information Technology,IT Services & Consulting,EQ,INE214T01019,Large
-LUPIN,Lupin Ltd.,Healthcare,Pharmaceuticals,EQ,INE326A01037,Mid
-TORNTPHARM,Torrent Pharmaceuticals Ltd.,Healthcare,Pharmaceuticals,EQ,INE685A01028,Mid
-AUROPHARMA,Aurobindo Pharma Ltd.,Healthcare,Pharmaceuticals,EQ,INE406A01037,Mid
-BIOCON,Biocon Ltd.,Healthcare,Biotechnology,EQ,INE376G01013,Mid
-FEDERALBNK,Federal Bank Ltd.,Financial Services,Banks,EQ,INE171A01029,Mid
-IDFCFIRSTB,IDFC First Bank Ltd.,Financial Services,Banks,EQ,INE092T01019,Mid
-BANDHANBNK,Bandhan Bank Ltd.,Financial Services,Banks,EQ,INE545U01014,Mid
-CANBK,Canara Bank,Financial Services,Banks,EQ,INE476A01022,Mid
-PNB,Punjab National Bank,Financial Services,Banks,EQ,INE160A01022,Mid
-INDUSTOWER,Indus Towers Ltd.,Telecommunication,Telecom Infrastructure,EQ,INE121J01017,Mid
-TATAPOWER,Tata Power Company Ltd.,Utilities,Power Generation,EQ,INE245A01021,Mid
-NHPC,NHPC Ltd.,Utilities,Power Generation,EQ,INE848E01016,Mid
-IRCTC,Indian Railway Catering and Tourism Corp. Ltd.,Consumer Services,Travel Services,EQ,INE335Y01020,Mid
-HAL,Hindustan Aeronautics Ltd.,Capital Goods,Aerospace & Defense,EQ,INE066F01020,Large
-BEL,Bharat Electronics Ltd.,Capital Goods,Electronic Equipment,EQ,INE263A01024,Large
-BHEL,Bharat Heavy Electricals Ltd.,Capital Goods,Heavy Electrical Equipment,EQ,INE257A01026,Mid
-SAIL,Steel Authority of India Ltd.,Metals & Mining,Iron & Steel Products,EQ,INE114A01011,Mid
-NMDC,NMDC Ltd.,Metals & Mining,Iron Ore Mining,EQ,INE584A01023,Mid
-GAIL,GAIL (India) Ltd.,Energy,Gas Distribution,EQ,INE129A01019,Large
-PETRONET,Petronet LNG Ltd.,Energy,Gas Distribution,EQ,INE347G01014,Mid
-MRF,MRF Ltd.,Automobile,Tyres & Rubber Products,EQ,INE883A01011,Mid
-MOTHERSON,Motherson Sumi Wiring India Ltd.,Automobile,Auto Components,EQ,INE775A01035,Mid
-BALKRISIND,Balkrishna Industries Ltd.,Automobile,Tyres & Rubber Products,EQ,INE787D01026,Mid
-COLPAL,Colgate Palmolive (India) Ltd.,FMCG,Personal Products,EQ,INE259A01022,Mid
-PAGEIND,Page Industries Ltd.,Consumer Durables,Textiles,EQ,INE761H01022,Mid
-VOLTAS,Voltas Ltd.,Consumer Durables,Air Conditioning,EQ,INE226A01021,Mid
-CROMPTON,Crompton Greaves Consumer Electricals Ltd.,Consumer Durables,Consumer Electronics,EQ,INE299U01018,Mid
-OBEROIRLTY,Oberoi Realty Ltd.,Real Estate,Real Estate Development,EQ,INE093I01010,Mid
-PRESTIGE,Prestige Estates Projects Ltd.,Real Estate,Real Estate Development,EQ,INE811K01011,Mid
-MFSL,Max Financial Services Ltd.,Financial Services,Life Insurance,EQ,INE180A01020,Mid
+Symbol,Company Name,Sector,Industry,Cap Category
+RELIANCE,Reliance Industries Limited,Energy,Oil & Gas Refining & Marketing,Large
+TCS,Tata Consultancy Services Limited,Technology,Information Technology Services,Large
+INFY,Infosys Limited,Technology,Information Technology Services,Large
+HDFCBANK,HDFC Bank Limited,Financial Services,Banks - Regional,Large
+ICICIBANK,ICICI Bank Limited,Financial Services,Banks - Regional,Large
+BHARTIARTL,Bharti Airtel Limited,Communication Services,Telecom Services,Large
+SBIN,State Bank of India,Financial Services,Banks - Regional,Large
+ITC,ITC Limited,Consumer Defensive,Tobacco,Large
+KOTAKBANK,Kotak Mahindra Bank Limited,Financial Services,Banks - Regional,Large
+LT,Larsen & Toubro Limited,Industrials,Engineering & Construction,Large
+AXISBANK,Axis Bank Limited,Financial Services,Banks - Regional,Large
+WIPRO,Wipro Limited,Technology,Information Technology Services,Large
+BAJFINANCE,Bajaj Finance Limited,Financial Services,Credit Services,Large
+HCLTECH,HCL Technologies Limited,Technology,Information Technology Services,Large
+MARUTI,Maruti Suzuki India Limited,Consumer Cyclical,Auto Manufacturers,Large
+SUNPHARMA,Sun Pharmaceutical Industries Limited,Healthcare,Drug Manufacturers - Specialty & Generic,Large
+TATAMOTORS,Tata Motors Ltd,Automobile,Passenger Cars & Utility Vehicles,Large
+ONGC,Oil and Natural Gas Corporation Limited,Energy,Oil & Gas Integrated,Large
+NTPC,NTPC Limited,Utilities,Utilities - Regulated Electric,Large
+POWERGRID,Power Grid Corporation of India Limited,Utilities,Utilities - Regulated Electric,Large
+ADANIENT,Adani Enterprises Limited,Energy,Thermal Coal,Large
+ADANIPORTS,Adani Ports and Special Economic Zone Limited,Industrials,Marine Shipping,Large
+COALINDIA,Coal India Limited,Energy,Thermal Coal,Large
+ULTRACEMCO,UltraTech Cement Limited,Basic Materials,Building Materials,Large
+NESTLEIND,Nestlé India Limited,Consumer Defensive,Packaged Foods,Large
+TITAN,Titan Company Limited,Consumer Cyclical,Luxury Goods,Large
+ASIANPAINT,Asian Paints Limited,Basic Materials,Specialty Chemicals,Large
+BAJAJFINSV,Bajaj Finserv Ltd.,Financial Services,Financial Conglomerates,Large
+DIVISLAB,Divi's Laboratories Limited,Healthcare,Drug Manufacturers - Specialty & Generic,Large
+DRREDDY,Dr. Reddy's Laboratories Limited,Healthcare,Drug Manufacturers - Specialty & Generic,Large
+EICHERMOT,Eicher Motors Limited,Consumer Cyclical,Auto Manufacturers,Large
+GRASIM,Grasim Industries Limited,Basic Materials,Building Materials,Large
+HEROMOTOCO,Hero MotoCorp Limited,Consumer Cyclical,Auto Manufacturers,Large
+HINDALCO,Hindalco Industries Limited,Basic Materials,Aluminum,Large
+HINDUNILVR,Hindustan Unilever Limited,Consumer Defensive,Household & Personal Products,Large
+INDUSINDBK,IndusInd Bank Limited,Financial Services,Banks - Regional,Large
+JSWSTEEL,JSW Steel Limited,Basic Materials,Steel,Large
+M&M,Mahindra & Mahindra Limited,Consumer Cyclical,Auto Manufacturers,Large
+SBILIFE,SBI Life Insurance Company Limited,Financial Services,Insurance - Life,Large
+TATASTEEL,Tata Steel Limited,Basic Materials,Steel,Large
+TECHM,Tech Mahindra Limited,Technology,Information Technology Services,Large
+VEDL,Vedanta Limited,Basic Materials,Other Industrial Metals & Mining,Large
+CIPLA,Cipla Limited,Healthcare,Drug Manufacturers - Specialty & Generic,Large
+BPCL,Bharat Petroleum Corporation Limited,Energy,Oil & Gas Refining & Marketing,Large
+HDFCLIFE,HDFC Life Insurance Company Limited,Financial Services,Insurance - Life,Large
+UPL,UPL Limited,Basic Materials,Agricultural Inputs,Large
+SHREECEM,Shree Cement Limited,Basic Materials,Building Materials,Large
+TATACONSUM,Tata Consumer Products Limited,Consumer Defensive,Packaged Foods,Large
+BRITANNIA,Britannia Industries Limited,Consumer Defensive,Packaged Foods,Large
+APOLLOHOSP,Apollo Hospitals Enterprise Limited,Healthcare,Medical Care Facilities,Large
+BAJAJ-AUTO,Bajaj Auto Limited,Consumer Cyclical,Auto Manufacturers,Large
+PIDILITIND,Pidilite Industries Limited,Basic Materials,Specialty Chemicals,Large
+HAVELLS,Havells India Limited,Industrials,Electrical Equipment & Parts,Large
+MUTHOOTFIN,Muthoot Finance Limited,Financial Services,Credit Services,Large
+BANDHANBNK,Bandhan Bank Limited,Financial Services,Banks - Regional,Large
+BIOCON,Biocon Limited,Healthcare,Biotechnology,Large
+CHOLAFIN,Cholamandalam Investment and Finance Company Limited,Financial Services,Credit Services,Large
+COFORGE,Coforge Limited,Technology,Information Technology Services,Large
+CUB,City Union Bank Limited,Financial Services,Banks - Regional,Large
+DALBHARAT,Dalmia Bharat Limited,Basic Materials,Building Materials,Large
+ESCORTS,Escorts Kubota Limited,Industrials,Farm & Heavy Construction Machinery,Large
+FEDERALBNK,The Federal Bank Limited,Financial Services,Banks - Regional,Large
+GLENMARK,Glenmark Pharmaceuticals Limited,Healthcare,Drug Manufacturers - Specialty & Generic,Large
+GODREJCP,Godrej Consumer Products Limited,Consumer Defensive,Household & Personal Products,Large
+GODREJPROP,Godrej Properties Limited,Real Estate,Real Estate - Development,Large
+GRANULES,Granules India Limited,Healthcare,Drug Manufacturers - Specialty & Generic,Large
+HAL,Hindustan Aeronautics Limited,Industrials,Aerospace & Defense,Large
+IDFCFIRSTB,IDFC First Bank Limited,Financial Services,Banks - Regional,Large
+INDUSTOWER,Indus Towers Limited,Communication Services,Telecom Services,Large
+IRCTC,Indian Railway Catering & Tourism Corporation Limited,Consumer Cyclical,Travel Services,Large
+JINDALSTEL,Jindal Steel Limited,Basic Materials,Steel,Large
+JUBLFOOD,Jubilant FoodWorks Limited,Consumer Cyclical,Restaurants,Large
+LUPIN,Lupin Limited,Healthcare,Drug Manufacturers - Specialty & Generic,Large
+MCDOWELL-N,United Spirits Ltd,Consumer Goods,Beverages,Large
+MFSL,Max Financial Services Limited,Financial Services,Insurance - Life,Large
+MGL,Mahanagar Gas Limited,Utilities,Utilities - Regulated Gas,Mid
+MOTHERSON,Samvardhana Motherson International Limited,Consumer Cyclical,Auto Parts,Large
+MPHASIS,Mphasis Limited,Technology,Information Technology Services,Large
+MRF,MRF Limited,Consumer Cyclical,Auto Parts,Large
+NATIONALUM,National Aluminium Company Limited,Basic Materials,Aluminum,Large
+NAVINFLUOR,Navin Fluorine International Limited,Basic Materials,Chemicals,Large
+NAUKRI,Info Edge (India) Limited,Communication Services,Internet Content & Information,Large
+OBEROIRLTY,Oberoi Realty Limited,Real Estate,Real Estate - Development,Large
+OFSS,Oracle Financial Services Software Limited,Technology,Software - Infrastructure,Large
+PAGEIND,Page Industries Limited,Consumer Cyclical,Apparel Manufacturing,Large
+PEL,Piramal Enterprises Ltd,Financial Services,NBFC,Mid
+PERSISTENT,Persistent Systems Limited,Technology,Information Technology Services,Large
+PETRONET,Petronet LNG Limited,Energy,Oil & Gas Refining & Marketing,Large
+PFC,Power Finance Corporation Limited,Financial Services,Credit Services,Large
+POLYCAB,Polycab India Limited,Industrials,Electrical Equipment & Parts,Large
+PVRINOX,PVR INOX Limited,Communication Services,Entertainment,Mid
+RBLBANK,RBL Bank Limited,Financial Services,Banks - Regional,Large
+RECLTD,REC Limited,Financial Services,Credit Services,Large
+SAIL,Steel Authority of India Limited,Basic Materials,Steel,Large
+SBICARD,SBI Cards and Payment Services Limited,Financial Services,Credit Services,Large
+SIEMENS,Siemens Limited,Industrials,Specialty Industrial Machinery,Large
+SRF,SRF Limited,Industrials,Conglomerates,Large
+SUNTVNETWORK,Sun TV Network Ltd,Services,Media & Entertainment,Mid
+SUPREMEIND,The Supreme Industries Limited,Industrials,Building Products & Equipment,Large
+TATACOMM,Tata Communications Limited,Communication Services,Telecom Services,Large
+TATAMTRDVR,Tata Motors Ltd DVR,Automobile,Passenger Cars & Utility Vehicles,Mid
+TORNTPHARM,Torrent Pharmaceuticals Limited,Healthcare,Drug Manufacturers - Specialty & Generic,Large
+TRENT,Trent Limited,Consumer Cyclical,Apparel Retail,Large
+TVSMOTOR,TVS Motor Company Limited,Consumer Cyclical,Auto Manufacturers,Large
+VBL,Varun Beverages Limited,Consumer Defensive,Beverages - Non-Alcoholic,Large
+VOLTAS,Voltas Limited,Consumer Cyclical,"Furnishings, Fixtures & Appliances",Large
+WHIRLPOOL,Whirlpool of India Limited,Consumer Cyclical,"Furnishings, Fixtures & Appliances",Mid
+ZOMATO,Zomato Ltd,Information Technology,Internet Software & Services,Large
+PAYTM,One97 Communications Limited,Technology,Software - Infrastructure,Large
+NYKAA,FSN E-Commerce Ventures Limited,Consumer Cyclical,Internet Retail,Large
+DELHIVERY,Delhivery Limited,Industrials,Integrated Freight & Logistics,Large
+POLICYBZR,PB Fintech Limited,Financial Services,Insurance Brokers,Large

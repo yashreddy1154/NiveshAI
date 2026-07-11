@@ -21,11 +21,20 @@ for d in [DATA_DIR, MODELS_DIR, REPORTS_DIR]:
     d.mkdir(parents=True, exist_ok=True)
 
 # ── API Keys ───────────────────────────────────────────────────────────
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
-NEWSAPI_KEY = os.getenv("NEWSAPI_KEY", "")
+import streamlit as st
+
+def _get_secret(key: str, default: str = "") -> str:
+    """Read from Streamlit secrets first, then .env"""
+    try:
+        return st.secrets.get(key, os.getenv(key, default))
+    except Exception:
+        return os.getenv(key, default)
+
+GEMINI_API_KEY = _get_secret("GEMINI_API_KEY")
+OPENAI_API_KEY = _get_secret("OPENAI_API_KEY")
+GROQ_API_KEY = _get_secret("GROQ_API_KEY")
+ANTHROPIC_API_KEY = _get_secret("ANTHROPIC_API_KEY")
+NEWSAPI_KEY = _get_secret("NEWSAPI_KEY")
 
 # ── Default LLM Provider ──────────────────────────────────────────────
 DEFAULT_LLM_PROVIDER = os.getenv("DEFAULT_LLM_PROVIDER", "gemini")
