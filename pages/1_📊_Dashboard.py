@@ -230,8 +230,10 @@ with st.sidebar:
 @st.cache_data(ttl=900, show_spinner=False)
 def load_stock_data(symbol, period):
     import time
-    history = fetch_history(symbol, period=period, add_indicators=True)
+    history = fetch_history(symbol, period=period, add_indicators=False)
     history = compute_all_indicators(history)  # adds ADX, Stochastic, OBV
+    # Deduplicate columns robustly
+    history = history.loc[:, ~history.columns.duplicated()]
     live    = fetch_live_price(symbol)
     fund    = fetch_fundamentals(symbol)
     fetch_timestamp = time.time()

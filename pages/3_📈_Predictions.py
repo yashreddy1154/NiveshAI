@@ -234,14 +234,18 @@ with st.sidebar:
 # ── Fetch stock data ──────────────────────────────────────────────────────────
 @st.cache_data(ttl=3600)
 def get_prediction_data(sym):
-    history = fetch_history(sym, period="1y")
-    return compute_all_indicators(history)
+    history = fetch_history(sym, period="1y", add_indicators=False)
+    df = compute_all_indicators(history)
+    # Deduplicate columns robustly
+    return df.loc[:, ~df.columns.duplicated()]
 
 with st.spinner(f"Fetching history and calculating features for {symbol}..."):
     history = get_prediction_data(symbol)
 
 # Ensure required indicators/columns are prepared (copying existing if available)
 if not history.empty:
+    # Deduplicate history columns first
+    history = history.loc[:, ~history.columns.duplicated()]
     if "RSI" in history.columns and "RSI_14" not in history.columns:
         history["RSI_14"] = history["RSI"]
     if "BB_PctB" in history.columns and "BB_pctB" not in history.columns:
