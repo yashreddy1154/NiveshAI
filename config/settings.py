@@ -5,8 +5,10 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv()
+# Load environment variables from the project root .env (absolute path so it
+# works regardless of the current working directory when Streamlit launches)
+_ENV_PATH = Path(__file__).parent.parent / ".env"
+load_dotenv(dotenv_path=_ENV_PATH, override=False)
 
 # ── Paths ──────────────────────────────────────────────────────────────
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -24,11 +26,15 @@ for d in [DATA_DIR, MODELS_DIR, REPORTS_DIR]:
 import streamlit as st
 
 def _get_secret(key: str, default: str = "") -> str:
-    """Read from Streamlit secrets first, then .env"""
+    """Read from Streamlit secrets first (if non-empty), then .env / os.environ."""
     try:
-        return st.secrets.get(key, os.getenv(key, default))
+        val = st.secrets.get(key, "")
+        # Treat empty string or placeholder as missing
+        if val and val not in ("your_key_here", "your-key-here"):
+            return val
     except Exception:
-        return os.getenv(key, default)
+        pass
+    return os.getenv(key, default)
 
 GEMINI_API_KEY = _get_secret("GEMINI_API_KEY")
 OPENAI_API_KEY = _get_secret("OPENAI_API_KEY")
