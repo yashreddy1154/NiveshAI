@@ -524,7 +524,7 @@ WELCOME_MSG = (
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = [{"role": "assistant", "content": WELCOME_MSG}]
 if "selected_model" not in st.session_state:
-    st.session_state.selected_model = "Gemini 2.0 Flash ✨ (FREE)"
+    st.session_state.selected_model = "Groq LLaMA 3 🚀"
 if "temperature" not in st.session_state:
     st.session_state.temperature = 0.7
 if "requests_used" not in st.session_state:
@@ -550,20 +550,60 @@ with st.sidebar:
     )
     st.markdown("---")
 
-    # Model selector
+    # ── Model selector — pill buttons ──────────────────────────────────
     st.markdown('<p class="sidebar-section">🧠 Model</p>', unsafe_allow_html=True)
-    model = st.selectbox(
-        "Select model",
-        [
-            "Gemini 2.0 Flash ✨ (FREE)",
-            "Gemini 2.5 Flash ⚡ (FREE)",
-            "OpenAI GPT-4o 🤖",
-            "Groq LLaMA 3 🚀",
-            "Anthropic Claude 🧠",
-        ],
-        index=0,
-        label_visibility="collapsed",
-    )
+
+    _MODELS = [
+        ("Groq LLaMA 3 🚀",           "FREE ⚡"),
+        ("Gemini 2.0 Flash ✨ (FREE)",   "FREE ✨"),
+        ("Gemini 2.5 Flash ⚡ (FREE)",   "FREE ✨"),
+        ("OpenAI GPT-4o 🤖",           "PAID"),
+        ("Anthropic Claude 🧠",        "PAID"),
+    ]
+
+    # Inject CSS for the pill buttons once
+    st.markdown("""
+    <style>
+    div[data-testid="stButton"] > button {
+        width: 100%;
+        border-radius: 10px;
+        border: 1.5px solid rgba(108,99,255,.25);
+        background: rgba(26,31,46,.7);
+        color: #CCC;
+        font-size: .82rem;
+        padding: 7px 10px;
+        text-align: left;
+        transition: all .2s ease;
+        margin-bottom: 4px;
+    }
+    div[data-testid="stButton"] > button:hover {
+        border-color: #6C63FF;
+        background: rgba(108,99,255,.18);
+        color: #FFF;
+    }
+    div[data-testid="stButton"] > button[kind="primary"] {
+        border-color: #6C63FF !important;
+        background: linear-gradient(135deg,rgba(108,99,255,.35),rgba(0,212,170,.15)) !important;
+        color: #FFF !important;
+        font-weight: 700;
+        box-shadow: 0 0 10px rgba(108,99,255,.35);
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    for _m_name, _m_badge in _MODELS:
+        _is_active = st.session_state.selected_model == _m_name
+        _btn_label = f"✓  {_m_name}" if _is_active else f"   {_m_name}"
+        if st.button(
+            _btn_label,
+            key=f"model_btn_{_m_name}",
+            type="primary" if _is_active else "secondary",
+            use_container_width=True,
+        ):
+            st.session_state.selected_model = _m_name
+            st.rerun()
+
+    model = st.session_state.selected_model
     st.session_state.selected_model = model
 
     # API key setup & mapping
@@ -620,19 +660,47 @@ with st.sidebar:
 
     st.markdown("---")
 
-    # Usage meter (Gemini Free tier limits: 1500 req/day)
+    # Usage meter — model-specific limits
     st.markdown('<p class="sidebar-section">📊 Usage Today</p>', unsafe_allow_html=True)
+
+    # Map selected model name → LLM_PROVIDERS key
+    from config.settings import LLM_PROVIDERS
+    _MODEL_KEY_MAP = {
+        "Groq LLaMA 3 🚀":            "groq",
+        "Gemini 2.0 Flash ✨ (FREE)":  "gemini",
+        "Gemini 2.5 Flash ⚡ (FREE)":  "gemini_25_flash",
+        "OpenAI GPT-4o 🤖":           "openai",
+        "Anthropic Claude 🧠":         "anthropic",
+    }
+    _provider_cfg   = LLM_PROVIDERS.get(_MODEL_KEY_MAP.get(model, "gemini"), {})
+    _daily_limit    = _provider_cfg.get("daily_limit", 1500)
+    _rpm_limit      = _provider_cfg.get("rpm_limit", 15)
+    _is_unlimited   = _daily_limit == float("inf")
+
     used = st.session_state.requests_used
-    limit = 1500
-    pct = min(1.0, used / limit)
+    if _is_unlimited:
+        pct       = 0.0
+        limit_str = "Unlimited"
+        bar_color = "linear-gradient(90deg,#6C63FF,#00D4AA)"
+    else:
+        pct       = min(1.0, used / _daily_limit)
+        limit_str = f"{_daily_limit:,}"
+        # Red bar when > 80% used
+        bar_color = (
+            "linear-gradient(90deg,#FF6B6B,#FF4444)"
+            if pct >= 0.8
+            else "linear-gradient(90deg,#6C63FF,#00D4AA)"
+        )
+
     st.markdown(
         f"""
     <div class="usage-meter">
         <div style="display:flex;justify-content:space-between;font-size:.82rem;">
-            <span style="color:#CCC;">{used:,} / {limit:,} requests</span>
-            <span style="color:#6C63FF;font-weight:600;">{pct:.1%}</span>
+            <span style="color:#CCC;">{used:,} / {limit_str} req/day</span>
+            <span style="color:#6C63FF;font-weight:600;">{"∞" if _is_unlimited else f"{pct:.1%}"}</span>
         </div>
-        <div class="bar-bg"><div class="bar-fill" style="width:{pct*100:.1f}%"></div></div>
+        <div class="bar-bg"><div class="bar-fill" style="width:{pct*100:.1f}%;background:{bar_color};"></div></div>
+        <div style="font-size:.72rem;color:#666;margin-top:6px;">⚡ {_rpm_limit} req/min · {"Free tier" if _provider_cfg.get("is_free") else "Paid API"}</div>
     </div>
     """,
         unsafe_allow_html=True,
@@ -733,10 +801,13 @@ def _handle_prompt(prompt: str):
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Check daily limit warning
-    if st.session_state.requests_used >= 1200:
+    # Check daily limit warning — dynamic per model
+    _warn_cfg = LLM_PROVIDERS.get(_MODEL_KEY_MAP.get(model, "gemini"), {})
+    _warn_limit = _warn_cfg.get("daily_limit", 1500)
+    if _warn_limit != float("inf") and st.session_state.requests_used >= int(_warn_limit * 0.8):
         st.warning(
-            "⚠️ Warning: You have used 80% of your free tier limit (1500 requests/day)."
+            f"⚠️ You have used 80%+ of your daily limit "
+            f"({st.session_state.requests_used:,} / {_warn_limit:,} req/day) for {model.split('(')[0].strip()}."
         )
 
     is_gemini = "Gemini" in model
