@@ -79,7 +79,7 @@ LLM_PROVIDERS = {
     },
     "groq": {
         "name": "Groq LLaMA 3 70B",
-        "model_id": "llama-3.1-70b-versatile",
+        "model_id": "llama-3.3-70b-versatile",
         "is_free": True,
         "daily_limit": 14400,
         "rpm_limit": 30,

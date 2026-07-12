@@ -10,7 +10,7 @@ from agents.providers.base import LLMProvider
 class GroqProvider(LLMProvider):
     """Groq API provider — free tier, fast inference."""
 
-    def __init__(self, api_key: str = None, model_id: str = "llama-3.1-70b-versatile"):
+    def __init__(self, api_key: str = None, model_id: str = "llama-3.3-70b-versatile"):
         self._model_id = model_id
         self._api_key = api_key
 

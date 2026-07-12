@@ -520,13 +520,21 @@ with st.sidebar:
         provider = model.split(" ")[0]
         # Resolve keys
         env_key = ""
-        if provider == "OpenAI": env_key = OPENAI_API_KEY
-        elif provider == "Groq": env_key = GROQ_API_KEY
-        elif provider == "Anthropic": env_key = ANTHROPIC_API_KEY
+        placeholder = "sk-..."
+        if provider == "OpenAI":
+            env_key = OPENAI_API_KEY
+        elif provider == "Groq":
+            env_key = GROQ_API_KEY
+            placeholder = "gsk_..."
+        elif provider == "Anthropic":
+            env_key = ANTHROPIC_API_KEY
+            placeholder = "sk-ant-..."
 
-        user_key = st.text_input(f"🔑 {provider} API Key", type="password", placeholder="sk-...")
+        user_key = st.text_input(f"🔑 {provider} API Key", type="password", placeholder=placeholder)
         api_key_to_use = user_key if user_key else env_key
-        if not api_key_to_use:
+        if api_key_to_use:
+            st.markdown(f'<p class="green-info">✅ {provider} API Key configured</p>', unsafe_allow_html=True)
+        else:
             st.warning(f"⚠️ Configure {provider} key to use this model.")
 
     st.markdown("---")
@@ -714,10 +722,13 @@ def _handle_prompt(prompt: str):
                     if not api_key_to_use:
                         raise ValueError("API Key is missing or invalid. Please check your credentials.")
                     
+                    from config.settings import LLM_PROVIDERS
                     if "OpenAI" in model:
-                        response_text = call_openai(prompt, api_key_to_use, "gpt-4o", context_data, st.session_state.chat_history)
+                        model_id = LLM_PROVIDERS.get("openai", {}).get("model_id", "gpt-4o")
+                        response_text = call_openai(prompt, api_key_to_use, model_id, context_data, st.session_state.chat_history)
                     elif "Groq" in model:
-                        response_text = call_groq(prompt, api_key_to_use, "llama-3.1-70b-versatile", context_data, st.session_state.chat_history)
+                        model_id = LLM_PROVIDERS.get("groq", {}).get("model_id", "llama-3.3-70b-versatile")
+                        response_text = call_groq(prompt, api_key_to_use, model_id, context_data, st.session_state.chat_history)
                     else:
                         response_text = f"Inference for model `{model}` is not fully integrated yet. Please use Gemini or OpenAI."
                 except Exception as e:
